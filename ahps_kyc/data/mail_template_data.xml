@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="mail_template_ahps_kyc_request" model="mail.template">
+        <field name="name">aHPS: KYC Request</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="subject">{{ object.company_id.name or user.company_id.name }} - Customer Registration (KYC) Form</field>
+        <field name="email_from">{{ (user.email_formatted or user.company_id.email_formatted) }}</field>
+        <field name="partner_to">{{ object.id }}</field>
+        <field name="description">Sent to a new customer with the blank KYC form to fill in and return.</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p>Dear <t t-out="object.ahps_main_contact_id.name or object.name or ''">Customer</t>,</p>
+    <p>Thank you for your interest in working with <t t-out="user.company_id.name or ''">aHPS</t>.</p>
+    <p>To register you as a customer, please complete the attached Know Your Customer (KYC) form,
+        including the contact details of your procurement and finance departments, and return the
+        signed form to us by email together with a copy of your company registration certificate.</p>
+    <p>Once your registration is approved, we will share your customer ID, which will appear on all our
+        quotations and invoices.</p>
+    <p>Kind regards,</p>
+    <p t-out="user.name or ''">Joyce</p>
+</div>
+        </field>
+        <field name="auto_delete" eval="False"/>
+    </record>
+</odoo>

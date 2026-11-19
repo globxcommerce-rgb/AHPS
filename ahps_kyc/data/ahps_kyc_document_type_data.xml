@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="kyc_doc_type_kyc_form" model="ahps.kyc.document.type">
+        <field name="name">Signed KYC Form</field>
+        <field name="sequence">1</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="kyc_doc_type_incorporation" model="ahps.kyc.document.type">
+        <field name="name">Certificate of Incorporation / Registration</field>
+        <field name="sequence">2</field>
+    </record>
+    <record id="kyc_doc_type_tax" model="ahps.kyc.document.type">
+        <field name="name">Tax Registration (TIN) Certificate</field>
+        <field name="sequence">3</field>
+    </record>
+    <record id="kyc_doc_type_other" model="ahps.kyc.document.type">
+        <field name="name">Other</field>
+        <field name="sequence">99</field>
+    </record>
+</odoo>

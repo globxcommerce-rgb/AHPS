@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- PURCHASE ORDER -->
+    <template id="report_purchaseorder_document">
+        <t t-set="o" t-value="o.with_context(lang=o.partner_id.lang)"/>
+        <t t-set="ahps_footer_logos" t-value="False"/>
+        <t t-call="ahps_reports.ahps_layout">
+            <t t-set="t" t-value="o._ahps_report_totals()"/>
+            <t t-set="supplier" t-value="o.partner_id.commercial_partner_id"/>
+            <t t-set="supplier_attn" t-value="o._ahps_attention(o.partner_id)"/>
+            <t t-set="inv_att" t-value="company.ahps_po_invoice_contact_id"/>
+            <t t-set="ship" t-value="o.dest_address_id or (o.picking_type_id.warehouse_id.partner_id if 'picking_type_id' in o._fields else False) or company.partner_id"/>
+            <t t-set="ship_att" t-value="o.dest_address_id and o._ahps_attention(o.dest_address_id) or o.user_id.partner_id"/>
+            <t t-set="ahps_title">PURCHASE ORDER</t>
+            <t t-set="ahps_number" t-value="False"/>
+            <t t-set="ahps_right" t-value="'ahps_reports.ahps_po_right'"/>
+            <t t-set="ahps_title_top" t-value="34"/>
+            <t t-set="ahps_body_gap" t-value="14"/>
+            <t t-call="ahps_reports.ahps_doc_top">
+                <table style="width: 100%; border: 1px solid #999; font-size: 10px; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 33%; vertical-align: top; padding: 2px 4px; border-right: 1px solid #999;">
+                            <div style="font-weight: bold; text-decoration: underline;">SUPPLIER ADDRESS</div>
+                            <div style="font-weight: bold;" t-out="supplier.name"/>
+                            <div t-foreach="o._ahps_address_lines(supplier)" t-as="l" t-out="l"/>
+                            <div>&amp;nbsp;</div><div>&amp;nbsp;</div>
+                            <div t-if="supplier_attn">Att. <t t-out="supplier_attn.name"/></div>
+                            <div t-if="supplier_attn.phone or supplier.phone"><b>T:</b> <t t-out="supplier_attn.phone or supplier.phone"/></div>
+                            <div t-if="supplier_attn.email or supplier.email"><b>E:</b><span class="ahps-link" t-out="supplier_attn.email or supplier.email"/></div>
+                        </td>
+                        <td style="width: 33%; vertical-align: top; padding: 2px 4px; border-right: 1px solid #999;">
+                            <div style="font-weight: bold; text-decoration: underline;">INVOICE ADDRESS</div>
+                            <div style="font-weight: bold;" t-out="company.name"/>
+                            <div t-foreach="o._ahps_address_lines(company.partner_id)" t-as="l" t-out="l"/>
+                            <div>&amp;nbsp;</div><div>&amp;nbsp;</div>
+                            <div t-if="inv_att"><b>Att</b>: <t t-out="inv_att.name"/></div>
+                            <div t-if="inv_att.phone"><b>T:</b><t t-out="inv_att.phone"/></div>
+                            <div t-if="company.ahps_finance_email or inv_att.email"><b>E:</b><span class="ahps-link" t-out="company.ahps_finance_email or inv_att.email"/></div>
+                        </td>
+                        <td style="width: 34%; vertical-align: top; padding: 2px 4px;">
+                            <div style="font-weight: bold; text-decoration: underline;">SHIPPING ADDRESS</div>
+                            <div style="font-weight: bold;" t-out="ship.commercial_partner_id.name"/>
+                            <div t-foreach="o._ahps_address_lines(ship)" t-as="l" t-out="l"/>
+                            <div>&amp;nbsp;</div>
+                            <div t-if="ship_att"><b>Att</b>:<t t-out="ship_att.name"/></div>
+                            <div t-if="ship_att.phone"><b>T:</b><t t-out="ship_att.phone"/></div>
+                            <div t-if="ship_att.email"><b>E:</b><span class="ahps-link" t-out="ship_att.email"/></div>
+                        </td>
+                    </tr>
+                </table>
+            </t>
+            <div style="height: 14px;"/>
+
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=42)"/>
+            <table class="ahps-grid">
+                <colgroup>
+                    <col style="width: 7%;"/><col style="width: 7%;"/><col style="width: 50%;"/>
+                    <col style="width: 13%;"/><col style="width: 9%;"/><col style="width: 14%;"/>
+                </colgroup>
+                <thead>
+                    <tr><th>POS</th><th class="c">Qty</th><th>DESCRIPTION</th><th>UNIT PRICE</th><th class="c">DISC (%)</th><th>TOTAL</th></tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="ahps_rows" t-as="row">
+                        <td class="c" t-out="row.get('pos', '')"/>
+                        <td class="c" t-out="row.get('qty', '')"/>
+                        <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
+                        <td class="r"><t t-if="row.get('price')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['price']"/></t></td>
+                        <td class="c" t-out="row.get('disc', '')"/>
+                        <td class="r"><t t-if="row.get('total')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['total']"/></t></td>
+                    </tr>
+                </tbody>
+            </table>
+            <table style="width: 100%; page-break-inside: avoid; font-size: 10px;">
+                <tr>
+                    <td style="width: 23%; vertical-align: top;">
+                        <div style="font-weight: bold;">Payment Terms</div>
+                        <table style="border: 1px solid #000; border-collapse: collapse; width: 100%; font-size: 10px;">
+                            <tr t-foreach="o._ahps_payment_term_rows()" t-as="pt">
+                                <td style="padding: 0 3px; width: 35%;" t-out="pt[0]"/><td style="padding: 0 3px;" t-out="pt[1]"/>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 46%; vertical-align: top; padding: 4px 18px;">
+                        <div t-if="company.ahps_po_special_note" style="border: 1px solid #999; padding: 4px 8px; min-height: 40px;">
+                            <div style="font-weight: bold; text-decoration: underline;">SPECIAL NOTE!</div>
+                            <div class="ahps-red" t-out="company.ahps_po_special_note"/>
+                        </div>
+                    </td>
+                    <td style="width: 31%; vertical-align: top;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                            <tr><td style="border: 1px solid #000; font-weight: bold; padding: 0 3px; width: 46%;">Total (VAT Excl.)</td><td style="border: 1px solid #000; padding: 0 3px; font-weight: bold;"><span class="ahps-cur" t-out="t['symbol']"/><span style="float: right;" t-out="t['untaxed']"/></td></tr>
+                            <tr><td style="border: 1px solid #000; padding: 0 3px;" t-out="t['tax_label']"/><td style="border: 1px solid #000; padding: 0 3px; text-align: right;" t-out="t['tax']"/></tr>
+                            <tr><td style="border: 1px solid #000; padding: 0 3px;">Total (VAT Incl.)</td><td style="border: 1px solid #000; padding: 0 3px; font-weight: bold;"><span class="ahps-cur" t-out="t['symbol']"/><span style="float: right;" t-out="t['total']"/></td></tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <div style="font-size: 10px; margin-top: 10px;">
+                In case of any questions about this purchase order, please contact<br/>
+                <span class="ahps-link" t-out="company.ahps_operations_contact or ''"/>
+            </div>
+            <div class="ahps-thanks" style="margin-top: 14px; font-size: 10px;">Thank You For Your Business</div>
+        </t>
+    </template>
+
+    <template id="ahps_po_right">
+        <t t-set="cp" t-value="company.partner_id"/>
+        <div class="ahps-cbox" style="font-size: 10px;">
+            <div t-out="company.name"/>
+            <div t-if="cp.street" t-out="cp.street"/>
+            <div t-if="cp.city or cp.country_id"><t t-out="cp.city"/><t t-if="cp.city and cp.country_id"> - </t><t t-out="(cp.country_id.name or '').upper()"/></div>
+            <div class="ahps-sep" t-if="company.email"><a t-att-href="'mailto:%s' % company.email" t-out="company.email"/></div>
+            <div class="ahps-sep" t-if="company.phone">Phone: <t t-out="company.phone"/></div>
+            <div class="ahps-sep" t-if="company.ahps_registration_no"><b>Cert. of Registration</b>: <t t-out="company.ahps_registration_no"/></div>
+            <div class="ahps-sep" t-if="company.vat"><b>KRA PIN:</b> <t t-out="company.vat"/></div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <tr><td style="border: 1px solid #000; font-weight: bold; width: 50%; padding: 0 3px;">Date</td><td style="border: 1px solid #000; padding: 0 3px;" t-out="o._ahps_fmt_date(o.date_approve or o.date_order, '%d/%m/%Y')"/></tr>
+            <tr><td style="border: 1px solid #000; font-weight: bold; padding: 0 3px;">QUOTE #</td><td style="border: 1px solid #000; padding: 0 3px;" t-out="o.partner_ref or ''"/></tr>
+            <tr><td style="border: 1px solid #000; font-weight: bold; padding: 0 3px;">Supplier ID</td><td style="border: 1px solid #000; padding: 0 3px;" t-out="o.partner_id.commercial_partner_id.ref or ''"/></tr>
+            <tr><td style="border: 1px solid #000; font-weight: bold; padding: 0 3px;">PO No.</td><td style="border: 1px solid #000; padding: 0 3px;" t-out="o.name"/></tr>
+            <tr><td style="border: 1px solid #000; font-weight: bold; padding: 0 3px;">Delivery Terms</td><td style="border: 1px solid #000; padding: 0 3px;" t-out="o._ahps_delivery_terms()"/></tr>
+        </table>
+    </template>
+
+    <!-- REQUEST FOR QUOTE -->
+    <template id="report_purchasequotation_document">
+        <t t-set="o" t-value="o.with_context(lang=o.partner_id.lang)"/>
+        <t t-set="ahps_footer_logos" t-value="False"/>
+        <t t-call="ahps_reports.ahps_layout">
+            <t t-set="supplier" t-value="o.partner_id.commercial_partner_id"/>
+            <t t-set="supplier_attn" t-value="o._ahps_attention(o.partner_id)"/>
+            <t t-set="ahps_title">REQUEST FOR QUOTE</t>
+            <t t-set="ahps_number" t-value="False"/>
+            <t t-set="ahps_show_bank" t-value="True"/>
+            <t t-call="ahps_reports.ahps_doc_top">
+            <table class="ahps-box" style="width: 100%;">
+                <tr>
+                    <td style="width: 56%; border-right: 1px solid #000;">
+                        <div class="ahps-h">SUPPLIER DETAILS</div>
+                        <div style="font-weight: bold;" t-out="supplier.name"/>
+                        <div t-if="supplier_attn">Att.: <t t-out="supplier_attn.name"/></div>
+                        <div t-foreach="o._ahps_address_lines(supplier)" t-as="l" t-out="l"/>
+                        <div>&amp;nbsp;</div>
+                        <div t-if="supplier_attn.phone or supplier.phone">Phone: <t t-out="supplier_attn.phone or supplier.phone"/></div>
+                        <div t-if="supplier_attn.email or supplier.email">Email: &amp;nbsp;<t t-out="supplier_attn.email or supplier.email"/></div>
+                    </td>
+                    <td style="width: 44%;">
+                        <div class="ahps-h" style="text-align: center;">RFQ DETAILS</div>
+                        <table class="ahps-kv" style="width: 100%;">
+                            <tr><td class="k">Date:</td><td t-out="o._ahps_fmt_date(o.create_date)"/></tr>
+                            <tr><td class="k">RFQ No.:</td><td t-out="o.name"/></tr>
+                            <tr><td class="k">Quote Deadline:</td><td t-out="o._ahps_fmt_date(o.date_order)"/></tr>
+                            <tr t-if="o.partner_ref"><td class="k">Project No.</td><td t-out="o.partner_ref"/></tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            </t>
+
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=30, spacer=False)"/>
+            <table class="ahps-grid">
+                <colgroup><col style="width: 4%;"/><col style="width: 4%;"/><col style="width: 56%;"/><col style="width: 36%;"/></colgroup>
+                <thead><tr><th>POS</th><th>QTY</th><th>DESCRIPTION</th><th class="c">PART  No.</th></tr></thead>
+                <tbody>
+                    <tr t-foreach="ahps_rows" t-as="row">
+                        <td class="c" t-out="row.get('pos', '').lstrip('0')"/>
+                        <td class="c" t-out="row.get('qty', '')"/>
+                        <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
+                        <td class="c" t-out="row.get('part', '') if row.get('style') == 'product' else ''"/>
+                    </tr>
+                </tbody>
+            </table>
+            <table style="width: 64%; border: 1px solid #000; font-size: 10.5px; page-break-inside: avoid;">
+                <tr><td style="background: #D9D9D9; font-weight: bold; padding: 1px 3px;" colspan="2">QUOTATION INFORMATION</td></tr>
+                <tr><td colspan="2" style="height: 36px;"/></tr>
+                <tr><td style="width: 45%; padding: 0 3px;">Delivery Terms</td><td>: <i t-out="o._ahps_delivery_terms() or 'N/A'"/></td></tr>
+                <tr t-if="o.ahps_end_user_id">
+                    <td style="padding: 0 3px; vertical-align: top;">End User</td>
+                    <td>: <t t-out="o.ahps_end_user_id.name"/><div t-if="o.ahps_end_user_id.city" style="padding-left: 8px;" t-out="o.ahps_end_user_id.city"/></td>
+                </tr>
+                <tr><td colspan="2" style="padding: 4px 0 2px 24px;"><span class="ahps-sign" t-out="company.ahps_doc_signatory or ''"/></td></tr>
+            </table>
+            <t t-set="ahps_doc_label" t-value="'quotation'"/>
+            <t t-call="ahps_reports.ahps_doc_bottom"/>
+        </t>
+    </template>
+
+    <template id="report_purchaseorder_ahps" inherit_id="purchase.report_purchaseorder">
+        <xpath expr="//t[@t-call='purchase.report_purchaseorder_document']" position="attributes">
+            <attribute name="t-call">ahps_reports.report_purchaseorder_document</attribute>
+        </xpath>
+    </template>
+    <template id="report_purchasequotation_ahps" inherit_id="purchase.report_purchasequotation">
+        <xpath expr="//t[@t-call='purchase.report_purchasequotation_document']" position="attributes">
+            <attribute name="t-call">ahps_reports.report_purchasequotation_document</attribute>
+        </xpath>
+    </template>
+</odoo>

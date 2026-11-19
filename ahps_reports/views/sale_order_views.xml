@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_ahps_reports" model="ir.ui.view">
+        <field name="name">sale.order.form.ahps.reports</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="ahps_quote_category"/>
+            </xpath>
+            <xpath expr="//group[@name='sale_shipping']" position="inside">
+                <field name="ahps_lead_time" placeholder="e.g. 2-3 weeks after order confirmation"/>
+                <field name="ahps_port_loading"/>
+                <field name="ahps_port_destination"/>
+                <field name="ahps_packing_details" placeholder="e.g. 43 x 35 x 32 cm"/>
+                <field name="ahps_gross_weight" placeholder="e.g. Approx. 8.0 Kg"/>
+            </xpath>
+            <xpath expr="//group[@name='sale_shipping']" position="after">
+                <group name="ahps_pfi" string="Pro Forma Invoice" invisible="not ahps_pfi_number">
+                    <field name="ahps_pfi_number"/>
+                    <field name="ahps_pfi_date"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_sales_order_filter_ahps_reports" model="ir.ui.view">
+        <field name="name">sale.order.search.ahps.reports</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <filter name="group_ahps_quote_category" string="Quotation Category" context="{'group_by': 'ahps_quote_category'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

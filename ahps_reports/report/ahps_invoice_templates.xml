@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="ahps_invoice_company_box">
+        <t t-set="cp" t-value="company.partner_id"/>
+        <t t-set="banks" t-value="company._ahps_bank_accounts()"/>
+        <div class="ahps-cbox" style="position: relative; font-size: 10px;">
+            <img t-if="company.ahps_show_accreditation" src="/ahps_reports/static/img/iso_17025.png"
+                 style="position: absolute; right: 6px; top: 4px; height: 44px;" alt="ISO/IEC 17025"/>
+            <div t-out="company.name"/>
+            <div t-if="cp.street" t-out="cp.street"/>
+            <div t-if="cp.street2" t-out="cp.street2"/>
+            <div t-if="cp.city or cp.country_id"><t t-out="cp.city"/><t t-if="cp.city and cp.country_id"> - </t><t t-out="(cp.country_id.name or '').upper()"/></div>
+            <div t-if="company.email"><a t-att-href="'mailto:%s' % company.email" t-out="company.email"/></div>
+            <div t-if="company.phone">Phone: <t t-out="company.phone"/></div>
+            <table class="ahps-kv" style="margin-left: -3px;">
+                <tr t-if="company.ahps_registration_no"><td style="padding-left: 0; padding-right: 14px;">Company Registration</td><td class="b" style="font-weight: bold;" t-out="company.ahps_registration_no"/></tr>
+                <tr t-if="company.vat"><td style="padding-left: 0;">KRA PIN</td><td style="font-weight: bold;" t-out="company.vat"/></tr>
+            </table>
+            <div style="letter-spacing: 2px;">* * * * * * * * * * * * * * * * * * * * * * * * * * *</div>
+            <t t-if="banks">
+                <div style="font-weight: bold; padding-top: 4px;">BANK PAYMENT DETAILS</div>
+                <table class="ahps-kv" style="margin-left: -3px;">
+                    <tr><td style="padding-left: 0;">Account name</td><td style="font-weight: bold;" t-out="banks[0].partner_id.name"/></tr>
+                    <tr><td style="padding-left: 0;">Bank name</td><td style="font-weight: bold;" t-out="banks[0].bank_name"/></tr>
+                    <tr t-foreach="banks" t-as="bank">
+                        <td style="padding-left: 0;"><t t-if="bank_first">Account No.</t></td>
+                        <td style="font-weight: bold;"><t t-out="bank.account_number"/><t t-set="bcur" t-value="bank._ahps_currency()"/><t t-if="bcur"> (<t t-out="bcur.name"/>)</t></td>
+                    </tr>
+                    <tr t-if="banks[0].bank_bic"><td style="padding-left: 0;">Swift Code</td><td style="font-weight: bold;" t-out="banks[0].bank_bic"/></tr>
+                </table>
+            </t>
+        </div>
+    </template>
+
+    <template id="ahps_invoice_address">
+        <t t-set="attn" t-value="o._ahps_attention(ahps_partner)"/>
+        <div style="font-weight: bold; text-decoration: underline;" t-out="ahps_heading"/>
+        <div t-out="ahps_partner.commercial_partner_id.name"/>
+        <div t-foreach="o._ahps_address_lines(ahps_partner)" t-as="addr_line" t-out="addr_line"/>
+        <div>&amp;nbsp;</div>
+        <div t-if="attn">Att: <t t-out="attn.name"/></div>
+        <t t-set="phone" t-value="attn.phone or ahps_partner.commercial_partner_id.phone"/>
+        <t t-set="email" t-value="attn.email or ahps_partner.commercial_partner_id.email"/>
+        <div t-if="phone">T: <t t-out="phone"/></div>
+        <div t-if="email"><span class="ahps-link">Email:<t t-out="email"/></span></div>
+    </template>
+
+    <template id="report_invoice_document">
+        <t t-set="o" t-value="o.with_context(lang=lang)"/>
+        <t t-set="ahps_footer_logos" t-value="True"/>
+        <t t-call="ahps_reports.ahps_layout">
+            <t t-set="t" t-value="o._ahps_report_totals()"/>
+            <t t-set="so" t-value="o._ahps_sale_orders()[:1]"/>
+            <t t-if="o.move_type == 'out_refund'"><t t-set="ahps_title">CREDIT NOTE</t></t>
+            <t t-elif="o.state == 'draft'"><t t-set="ahps_title">DRAFT INVOICE</t></t>
+            <t t-else=""><t t-set="ahps_title">INVOICE</t></t>
+            <t t-set="ahps_number" t-value="o.name if o.name and o.name != '/' else ''"/>
+            <t t-set="ahps_right" t-value="'ahps_reports.ahps_invoice_company_box'"/>
+            <t t-set="ahps_number_style" t-value="'font-size: 10px; font-weight: bold;'"/>
+            <t t-set="ahps_body_gap" t-value="10"/>
+            <t t-call="ahps_reports.ahps_doc_top">
+                <table style="width: 100%; font-size: 10.5px; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 1px 3px;">
+                            <t t-set="ahps_partner" t-value="o.partner_id"/>
+                            <t t-set="ahps_heading">INVOICE ADDRESS</t>
+                            <t t-call="ahps_reports.ahps_invoice_address"/>
+                        </td>
+                        <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 1px 3px;">
+                            <t t-set="ahps_partner" t-value="o.partner_shipping_id or o.partner_id"/>
+                            <t t-set="ahps_heading">SHIPPING ADDRESS</t>
+                            <t t-call="ahps_reports.ahps_invoice_address"/>
+                        </td>
+                    </tr>
+                </table>
+            </t>
+
+            <table class="ahps-grid" style="margin-top: 0;">
+                <colgroup>
+                    <col style="width: 20%;"/><col style="width: 13%;"/><col style="width: 20%;"/><col style="width: 21%;"/><col style="width: 26%;"/>
+                </colgroup>
+                <tr style="background: #D9D9D9;">
+                    <td class="c" style="font-weight: bold;">PO Reference</td><td class="c" style="font-weight: bold;">Order Date</td>
+                    <td class="c" style="font-weight: bold;">aHPS Quote No.</td><td class="c" style="font-weight: bold;">Invoice Date</td>
+                    <td class="c" style="font-weight: bold;">Invoice Number</td>
+                </tr>
+                <tr>
+                    <td class="c" t-out="o.ref or (so.client_order_ref if so else '') or ''"/>
+                    <td class="c" t-out="o._ahps_fmt_date(so.date_order, '%d/%m/%Y') if so else ''"/>
+                    <td class="c" t-out="o.invoice_origin or ''"/>
+                    <td class="c" t-out="o._ahps_fmt_date(o.invoice_date, '%d/%m/%Y')"/>
+                    <td class="c" t-out="ahps_number"/>
+                </tr>
+                <tr style="background: #D9D9D9;">
+                    <td class="c" colspan="2" style="font-weight: bold;">Payment Term</td>
+                    <td class="c" style="font-weight: bold;">Delivery Term</td>
+                    <td class="c" style="font-weight: bold;">Port of Loading</td>
+                    <td class="c" style="font-weight: bold;">Final Destination</td>
+                </tr>
+                <tr>
+                    <td class="c wrap" colspan="2" t-out="o.invoice_payment_term_id.name or ''"/>
+                    <td class="c" t-out="o._ahps_delivery_terms()"/>
+                    <td class="c" t-out="o.ahps_port_loading or ''"/>
+                    <td class="c" t-out="o.ahps_final_destination or (o.partner_shipping_id or o.partner_id).country_id.name or ''"/>
+                </tr>
+            </table>
+
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=36)"/>
+            <t t-set="ahps_code_label">Art No.</t>
+            <t t-set="ahps_tariff" t-value="True"/>
+            <t t-call="ahps_reports.ahps_line_grid"/>
+
+            <table style="width: 100%; page-break-inside: avoid;">
+                <tr>
+                    <td style="width: 69%;"/>
+                    <td style="width: 31%;">
+                        <table class="ahps-totals" style="width: 100%;">
+                            <colgroup><col style="width: 50%;"/><col style="width: 12%;"/><col style="width: 38%;"/></colgroup>
+                            <tr><td class="b">&amp;nbsp;Net Due</td><td class="b" t-out="t['symbol']"/><td class="b" style="text-align: right;" t-out="t['net']"/></tr>
+                            <tr><td style="font-size: 9.5px;">DISCOUNT</td><td><t t-if="t['discount']" t-out="t['symbol']"/></td><td style="text-align: right;" t-out="t['discount']"/></tr>
+                            <tr><td style="font-size: 9.5px;" t-out="t['vat_label']"/><td t-out="t['symbol']"/><td style="text-align: right;" t-out="t['vat']"/></tr>
+                            <tr><td style="font-size: 9.5px;">Other Taxes</td><td t-out="t['symbol']"/><td style="text-align: right;" t-out="t['other_taxes']"/></tr>
+                            <tr style="border-bottom: 2px solid #000;"><td style="font-size: 9.5px;">Others</td><td><t t-if="t['others']" t-out="t['symbol']"/></td><td style="text-align: right;" t-out="t['others']"/></tr>
+                            <tr><td class="b">TOTAL Due</td><td class="b" t-out="t['symbol']"/><td class="b" style="text-align: right;" t-out="t['total']"/></tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <div style="font-size: 10px; margin-top: 2px;">
+                <div>When paying the due amount, use our invoice number as reference !</div>
+                <div>In case you have any question on this invoice, please contact:
+                    <span class="ahps-link" style="margin-left: 120px;" t-out="o.company_id.ahps_finance_email or o.company_id.email"/></div>
+            </div>
+            <div class="ahps-thanks" style="margin: 10px 0 0 100px; font-size: 10px;">Thank You For Your Business</div>
+        </t>
+    </template>
+
+    <template id="report_invoice_ahps" inherit_id="account.report_invoice">
+        <xpath expr="//t[@t-call='account.report_invoice_document']" position="after">
+            <t t-elif="o._get_name_invoice_report() == 'ahps_reports.report_invoice_document'"
+               t-call="ahps_reports.report_invoice_document"
+               t-lang="lang"/>
+        </xpath>
+    </template>
+</odoo>

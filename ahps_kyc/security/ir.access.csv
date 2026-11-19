@@ -1,0 +1,6 @@
+id,name,model_id,group_id/id,operation,domain
+access_ahps_kyc_document_type_user,ahps.kyc.document.type user,ahps.kyc.document.type,base.group_user,r,
+access_ahps_kyc_document_type_manager,ahps.kyc.document.type manager,ahps.kyc.document.type,group_ahps_kyc_manager,crud,
+access_ahps_kyc_document_user,ahps.kyc.document user,ahps.kyc.document,base.group_user,r,
+access_ahps_kyc_document_officer,ahps.kyc.document officer,ahps.kyc.document,group_ahps_kyc_user,crud,
+access_ahps_kyc_reject_wizard,ahps.kyc.reject.wizard manager,ahps.kyc.reject.wizard,group_ahps_kyc_manager,crud,

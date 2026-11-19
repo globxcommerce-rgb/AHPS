@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Page frame: body + footer (partner logos, page numbers). No Odoo header/footer. -->
+    <template id="ahps_layout">
+        <t t-if="not o" t-set="o" t-value="doc"/>
+        <t t-set="company" t-value="o.company_id.sudo()"/>
+        <div class="article ahps-doc" t-att-data-oe-model="o and o._name" t-att-data-oe-id="o and o.id"
+             t-att-data-oe-lang="o and o.env.context.get('lang')">
+            <t t-call="ahps_reports.ahps_styles"/>
+            <t t-out="0"/>
+        </div>
+        <div class="footer">
+            <div style="font-family: Calibri, Carlito, Arial, sans-serif; font-size: 10px; color: #000;">
+                <t t-if="ahps_footer_logos and company.ahps_show_footer_logos">
+                    <div style="border-top: 2px solid #000; margin: 0 60px; padding-top: 4px; text-align: center;">
+                        <img t-att-src="'/ahps_reports/static/img/footer_logos.png'" style="height: 58px;" alt="Partners"/>
+                    </div>
+                </t>
+                <div style="text-align: right; padding-top: 2px;">
+                    Page <span class="page"/> of <span class="topage"/>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="ahps_styles">
+        <style>
+            .ahps-doc { font-family: Calibri, Carlito, Arial, sans-serif; font-size: 11px; color: #000; }
+            .ahps-doc table { border-collapse: collapse; border: 0 none; margin: 0; }
+            .ahps-doc table, .ahps-doc thead, .ahps-doc tbody, .ahps-doc tr, .ahps-doc td, .ahps-doc th { border-style: none; border-width: 0; }
+            .ahps-doc .ahps-top { width: 100%; margin-bottom: 4px; }
+            .ahps-doc .ahps-logo img { max-height: 72px; max-width: 170px; margin-top: 10px; }
+            .ahps-doc .ahps-title { text-align: center; font-size: 22px; font-weight: bold; }
+            .ahps-doc .ahps-title .ahps-number { font-size: 13px; padding-top: 6px; }
+            .ahps-doc .ahps-cbox { border: 1px dashed #555; padding: 5px 7px; font-size: 10.5px; line-height: 1.35; }
+            .ahps-doc .ahps-cbox a, .ahps-doc .ahps-link { color: #0563C1; text-decoration: underline; }
+            .ahps-doc .ahps-cbox .ahps-sep { padding-top: 5px; }
+            .ahps-doc table.ahps-box { border: 1px solid #000; }
+            .ahps-doc table.ahps-box > tbody > tr > td { vertical-align: top; padding: 1px 5px; font-size: 10.5px; }
+            .ahps-doc .ahps-box .ahps-h { font-weight: bold; text-decoration: underline; }
+            .ahps-doc table.ahps-kv td { padding: 0 3px; font-size: 10.5px; white-space: nowrap; }
+            .ahps-doc table.ahps-kv td.k { font-weight: bold; text-align: right; }
+            .ahps-doc table.ahps-grid { width: 100%; table-layout: fixed; }
+            .ahps-doc table.ahps-grid > thead > tr > th { background: #2F5597; color: #92D050; font-weight: bold; text-align: left;
+                                 padding: 1px 3px; font-size: 10px; border: 1px solid #000; }
+            .ahps-doc table.ahps-grid > tbody > tr > td { border: 1px solid #000; height: 14px; padding: 0 3px; font-size: 10px;
+                                 overflow: hidden; white-space: nowrap; }
+            .ahps-doc table.ahps-grid > tbody > tr > td.wrap { white-space: normal; }
+            .ahps-doc table.ahps-grid tr { page-break-inside: avoid; }
+            .ahps-doc table.ahps-grid .c { text-align: center; }
+            .ahps-doc table.ahps-grid .r { text-align: right; }
+            .ahps-doc .ahps-cur { float: left; }
+            .ahps-doc .ahps-sec { font-weight: bold; text-decoration: underline; }
+            .ahps-doc .ahps-subsec { font-weight: bold; font-style: italic; text-decoration: underline; }
+            .ahps-doc table.ahps-totals td { padding: 0 3px; font-size: 10.5px; height: 14px; }
+            .ahps-doc table.ahps-totals .b { font-weight: bold; }
+            .ahps-doc table.ahps-terms td { padding: 0 3px; font-size: 10.5px; height: 14px; vertical-align: top; }
+            .ahps-doc .ahps-sign { font-style: italic; border-bottom: 1px solid #000; display: inline-block;
+                         min-width: 280px; padding-left: 10px; }
+            .ahps-doc .ahps-thanks { font-weight: bold; font-style: italic; }
+            .ahps-doc .ahps-gridbox { border: 1px solid #000; }
+            .ahps-doc .ahps-red { color: #FF0000; }
+            .ahps-doc .ahps-top > tbody > tr > td { vertical-align: top; }
+        </style>
+    </template>
+
+    <!-- Two-column frame: [logo | TITLE (number)] + body on the left, company box on the right -->
+    <template id="ahps_doc_top">
+        <table class="ahps-top">
+            <tr>
+                <td style="width: 64%; padding-right: 0;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="ahps-logo" style="width: 40%;">
+                                <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" alt="Logo"/>
+                                <img t-else="" src="/ahps_reports/static/img/ahps_logo.png" alt="Logo"/>
+                            </td>
+                            <td class="ahps-title" t-att-style="'padding-top: %spx;' % (ahps_title_top or 30)">
+                                <div t-out="ahps_title"/>
+                                <div t-if="ahps_number" class="ahps-number" t-att-style="ahps_number_style or ''">(<t t-out="ahps_number"/>)</div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div t-att-style="'padding-top: %spx;' % (ahps_body_gap or 4)">
+                        <t t-out="0"/>
+                    </div>
+                </td>
+                <td style="width: 36%; padding-left: 0;">
+                    <t t-call="{{ ahps_right or 'ahps_reports.ahps_company_box' }}"/>
+                </td>
+            </tr>
+        </table>
+    </template>
+
+    <template id="ahps_company_box">
+        <t t-set="cp" t-value="company.partner_id"/>
+        <div class="ahps-cbox">
+            <div t-out="company.name"/>
+            <div t-if="cp.street" t-out="cp.street"/>
+            <div t-if="cp.street2" t-out="cp.street2"/>
+            <div t-if="cp.city or cp.country_id">
+                <t t-out="cp.city"/><t t-if="cp.city and cp.country_id"> - </t><t t-out="(cp.country_id.name or '').upper()"/>
+            </div>
+            <div t-if="company.email"><a t-att-href="'mailto:%s' % company.email" t-out="company.email"/></div>
+            <div t-if="company.phone">Phone: <t t-out="company.phone"/></div>
+            <div class="ahps-sep" t-if="company.ahps_registration_no"><b>Cert. of Registration</b>: <t t-out="company.ahps_registration_no"/></div>
+            <div t-if="company.vat"><b>KRA PIN:</b> <t t-out="company.vat"/></div>
+            <t t-if="ahps_show_bank">
+                <t t-set="banks" t-value="company._ahps_bank_accounts()"/>
+                <div class="ahps-sep" t-if="banks"><b style="text-decoration: underline;">BANK PAYMENT DETAILS:</b></div>
+                <t t-if="banks">
+                    <div t-out="banks[0].bank_name"/>
+                    <div t-if="ahps_bank_account_name">Account Name:</div>
+                    <div t-if="ahps_bank_account_name" t-out="banks[0].partner_id.name"/>
+                    <table class="ahps-kv" style="margin-left: -3px;">
+                        <tr t-foreach="banks" t-as="bank">
+                            <td style="padding-left: 0; padding-right: 10px;"><t t-if="bank_first">Account No.</t></td>
+                            <td><t t-out="bank.account_number"/><t t-set="bcur" t-value="bank._ahps_currency()"/><t t-if="bcur"> (<t t-out="bcur.name"/>)</t></td>
+                        </tr>
+                        <tr t-if="banks[0].bank_bic">
+                            <td style="padding-left: 0; padding-right: 10px;">Swift Code</td>
+                            <td t-out="banks[0].bank_bic"/>
+                        </tr>
+                    </table>
+                </t>
+            </t>
+        </div>
+    </template>
+
+    <!-- Partner block: Company / Attn / address / Phone / E-mail -->
+    <template id="ahps_partner_block">
+        <t t-set="attn" t-value="o._ahps_attention(ahps_partner)"/>
+        <div style="font-weight: bold;" t-out="ahps_partner.commercial_partner_id.name"/>
+        <div t-if="attn and ahps_attn_top">Attn. <t t-out="attn.name"/></div>
+        <div t-if="attn and ahps_attn_top and attn.function and ahps_show_function" t-out="attn.function"/>
+        <div t-foreach="o._ahps_address_lines(ahps_partner)" t-as="addr_line" t-out="addr_line"/>
+        <div>&amp;nbsp;</div>
+        <t t-set="phone" t-value="attn.phone or ahps_partner.commercial_partner_id.phone"/>
+        <t t-set="email" t-value="attn.email or ahps_partner.commercial_partner_id.email"/>
+        <div t-if="phone">Phone: &amp;nbsp;<t t-out="phone"/></div>
+        <div t-if="email"><b t-if="ahps_bold_email">E-mail :</b><t t-else="">Email:</t> <span class="ahps-link" t-out="email"/></div>
+    </template>
+
+    <!-- Contact line + thank you -->
+    <template id="ahps_doc_bottom">
+        <div style="margin-top: 10px; font-size: 10.5px;">
+            In case you have any questions about this <t t-out="ahps_doc_label or 'quotation'"/>, please contact<br/>
+            <b>aHPS Ltd.</b> / Tel. <b t-out="company.ahps_sales_phone or company.phone"/> / <b t-out="company.ahps_sales_email or company.email"/>
+        </div>
+        <div class="ahps-thanks" style="margin: 12px 0 0 110px;">Thank You For Your Business</div>
+    </template>
+</odoo>

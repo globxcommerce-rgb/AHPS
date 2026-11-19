@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ahps_kyc_reject_wizard_view_form" model="ir.ui.view">
+        <field name="name">ahps.kyc.reject.wizard.form</field>
+        <field name="model">ahps.kyc.reject.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reject KYC">
+                <field name="partner_ids" invisible="1"/>
+                <group>
+                    <field name="reason" placeholder="What is missing or wrong? The officer will see this on the customer."/>
+                </group>
+                <footer>
+                    <button name="action_reject" type="object" string="Reject KYC" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

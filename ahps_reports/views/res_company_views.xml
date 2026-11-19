@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_company_form_ahps_reports" model="ir.ui.view">
+        <field name="name">res.company.form.ahps.reports</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="aHPS Documents" name="ahps_documents">
+                    <group>
+                        <group string="Company Details">
+                            <field name="ahps_registration_no"/>
+                            <field name="ahps_doc_signatory"/>
+                            <field name="ahps_handling_charges"/>
+                            <field name="ahps_bank_account_ids" widget="many2many_tags"
+                                   domain="[('partner_id', '=', partner_id)]"/>
+                        </group>
+                        <group string="Contacts Printed">
+                            <field name="ahps_sales_phone"/>
+                            <field name="ahps_sales_email"/>
+                            <field name="ahps_finance_email"/>
+                            <field name="ahps_operations_contact"/>
+                            <field name="ahps_po_invoice_contact_id"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Purchase Orders">
+                            <field name="ahps_po_special_note"/>
+                        </group>
+                        <group string="Logos">
+                            <field name="ahps_show_footer_logos"/>
+                            <field name="ahps_show_accreditation"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_partner_bank_form_ahps_reports" model="ir.ui.view">
+        <field name="name">res.partner.bank.form.ahps.reports</field>
+        <field name="model">res.partner.bank</field>
+        <field name="inherit_id" ref="base.view_partner_bank_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='account_number']" position="after">
+                <field name="ahps_currency_id" options="{'no_create': True}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

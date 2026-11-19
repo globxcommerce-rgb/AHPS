@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_ahps_kyc" model="ir.ui.view">
+        <field name="name">res.partner.form.ahps.kyc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <!-- KYC workflow header (companies only) -->
+            <xpath expr="//form/div[@name='warning_tax']" position="before">
+                <header invisible="parent_id">
+                    <button name="action_ahps_kyc_send_request" type="object" string="Send KYC Form"
+                            class="btn-primary" invisible="ahps_kyc_state not in ('not_started', 'rejected')"
+                            groups="ahps_kyc.group_ahps_kyc_user"/>
+                    <button name="action_ahps_kyc_send_request" type="object" string="Resend KYC Form"
+                            invisible="ahps_kyc_state != 'requested'" groups="ahps_kyc.group_ahps_kyc_user"/>
+                    <button name="action_ahps_kyc_submit" type="object" string="Submit KYC for Review"
+                            class="btn-primary" invisible="ahps_kyc_state not in ('not_started', 'requested', 'rejected')"
+                            groups="ahps_kyc.group_ahps_kyc_user"/>
+                    <button name="action_ahps_kyc_approve" type="object" string="Approve KYC"
+                            class="btn-primary" invisible="ahps_kyc_state != 'submitted'"
+                            groups="ahps_kyc.group_ahps_kyc_manager"/>
+                    <button name="action_ahps_kyc_reject" type="object" string="Reject KYC"
+                            invisible="ahps_kyc_state != 'submitted'" groups="ahps_kyc.group_ahps_kyc_manager"/>
+                    <button name="action_ahps_kyc_reset" type="object" string="Reopen KYC"
+                            invisible="ahps_kyc_state != 'approved'" groups="ahps_kyc.group_ahps_kyc_manager"
+                            confirm="Reopening the KYC blocks new quotations and invoices for this customer until it is approved again. Continue?"/>
+                    <field name="ahps_kyc_state" widget="statusbar"
+                           statusbar_visible="not_started,requested,submitted,approved"/>
+                </header>
+            </xpath>
+            <xpath expr="//form/div[@name='warning_tax']" position="after">
+                <div class="alert alert-warning mb-0" role="alert" invisible="parent_id or not ahps_duplicate_partner_ids">
+                    <strong>Possible duplicate company</strong> (same name or TIN):
+                    <field name="ahps_duplicate_partner_ids" widget="many2many_tags" readonly="1"/>
+                </div>
+                <div class="alert alert-danger mb-0" role="alert" invisible="parent_id or ahps_kyc_state != 'rejected'">
+                    <strong>KYC rejected:</strong> <field name="ahps_kyc_rejection_reason" class="d-inline"/>
+                </div>
+                <div class="alert alert-info mb-0" role="alert"
+                     invisible="not parent_id or ahps_kyc_commercial_state == 'approved'">
+                    The company's KYC is not approved yet (<field name="ahps_kyc_commercial_state" readonly="1" class="d-inline"/>).
+                </div>
+            </xpath>
+
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_ahps_view_kyc_documents" type="object" class="oe_stat_button"
+                        icon="fa-id-card-o" invisible="parent_id">
+                    <field name="ahps_kyc_document_count" widget="statinfo" string="KYC Docs"/>
+                </button>
+            </xpath>
+            <xpath expr="//widget[@name='web_ribbon']" position="after">
+                <widget name="web_ribbon" title="KYC Approved" bg_color="text-bg-success"
+                        invisible="parent_id or ahps_kyc_state != 'approved' or not active"/>
+                <widget name="web_ribbon" title="KYC Pending" bg_color="text-bg-warning"
+                        invisible="parent_id or ahps_kyc_state not in ('requested', 'submitted') or not active"/>
+            </xpath>
+
+            <!-- KYC tab -->
+            <xpath expr="//page[@name='sales_purchases']" position="before">
+                <page name="ahps_kyc" string="KYC" invisible="parent_id">
+                    <group>
+                        <group string="Customer Identification">
+                            <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. 2026.021"
+                                   readonly="1" groups="!ahps_kyc.group_ahps_kyc_manager"/>
+                            <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. 2026.021"
+                                   groups="ahps_kyc.group_ahps_kyc_manager"/>
+                            <field name="ahps_registration_date"/>
+                            <field name="vat" string="TIN"/>
+                            <field name="ahps_company_registry"/>
+                            <field name="ahps_postal_address"/>
+                            <field name="ahps_company_group_id" />
+                        </group>
+                        <group string="Categorisation">
+                            <field name="ahps_customer_type" widget="radio" options="{'horizontal': true}"/>
+                            <field name="ahps_customer_subcategory"
+                                   invisible="ahps_customer_type != 'end_user'"
+                                   required="ahps_customer_type == 'end_user' and ahps_kyc_state == 'submitted'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="KYC Contacts">
+                            <field name="ahps_main_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
+                            <field name="ahps_alternative_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
+                            <field name="ahps_procurement_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
+                            <field name="ahps_finance_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
+                        </group>
+                        <group string="KYC Tracking">
+                            <field name="ahps_kyc_requested_date"/>
+                            <field name="ahps_kyc_submitted_date"/>
+                            <field name="ahps_kyc_approved_date"/>
+                            <field name="ahps_kyc_approved_by_id"/>
+                        </group>
+                    </group>
+                    <separator string="KYC Documents"/>
+                    <field name="ahps_kyc_document_ids" context="{'default_partner_id': id}">
+                        <list editable="bottom" decoration-danger="is_expired">
+                            <field name="document_type_id"/>
+                            <field name="name"/>
+                            <field name="attachment" filename="attachment_name" widget="binary"/>
+                            <field name="attachment_name" column_invisible="1"/>
+                            <field name="issue_date" optional="hide"/>
+                            <field name="expiry_date" optional="show"/>
+                            <field name="is_expired" column_invisible="1"/>
+                        </list>
+                    </field>
+                    <field name="ahps_group_member_ids" invisible="not ahps_group_member_ids" readonly="1">
+                        <list>
+                            <field name="name" string="Group Companies"/>
+                            <field name="country_id"/>
+                            <field name="ahps_customer_number"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- List / search -->
+    <record id="view_partner_tree_ahps_kyc" model="ir.ui.view">
+        <field name="name">res.partner.list.ahps.kyc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='display_name']" position="after">
+                <field name="ahps_customer_number" optional="show"/>
+                <field name="ahps_customer_type" optional="hide"/>
+                <field name="ahps_customer_subcategory" optional="hide"/>
+                <field name="ahps_kyc_state" optional="show" widget="badge"
+                       decoration-success="ahps_kyc_state == 'approved'"
+                       decoration-warning="ahps_kyc_state in ('requested', 'submitted')"
+                       decoration-danger="ahps_kyc_state == 'rejected'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_res_partner_filter_ahps_kyc" model="ir.ui.view">
+        <field name="name">res.partner.search.ahps.kyc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="ahps_customer_number"/>
+            </xpath>
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="ahps_kyc_to_review" string="KYC to Review" domain="[('ahps_kyc_state', '=', 'submitted')]"/>
+                <filter name="ahps_kyc_pending" string="KYC Pending" domain="[('ahps_kyc_state', 'in', ('not_started', 'requested', 'rejected')), ('parent_id', '=', False)]"/>
+                <filter name="ahps_kyc_approved" string="KYC Approved" domain="[('ahps_kyc_state', '=', 'approved')]"/>
+                <separator/>
+                <filter name="ahps_end_users" string="End Users" domain="[('ahps_customer_type', '=', 'end_user')]"/>
+                <filter name="ahps_resellers" string="Resellers" domain="[('ahps_customer_type', '=', 'reseller')]"/>
+                <filter name="group_ahps_kyc_state" string="KYC Status" context="{'group_by': 'ahps_kyc_state'}"/>
+                <filter name="group_ahps_customer_type" string="Customer Category" context="{'group_by': 'ahps_customer_type'}"/>
+                <filter name="group_ahps_customer_subcategory" string="End-User Subcategory" context="{'group_by': 'ahps_customer_subcategory'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_ahps_kyc_customers" model="ir.actions.act_window">
+        <field name="name">Customer KYC</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('parent_id', '=', False)]</field>
+        <field name="context">{'res_partner_search_mode': 'customer', 'search_default_group_ahps_kyc_state': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Register a new customer</p>
+            <p>Send the KYC form, attach the signed form and submit it for review. Once approved, the customer gets an aHPS customer ID.</p>
+        </field>
+    </record>
+
+    <record id="action_ahps_kyc_to_review" model="ir.actions.act_window">
+        <field name="name">KYC to Review</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('ahps_kyc_state', '=', 'submitted')]</field>
+    </record>
+
+    <!-- Show customer KYC status / ID on quotations -->
+    <record id="view_order_form_ahps_kyc" model="ir.ui.view">
+        <field name="name">sale.order.form.ahps.kyc</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning mb-0" role="alert"
+                     invisible="not partner_id or ahps_kyc_state == 'approved' or state not in ('draft', 'sent')">
+                    The KYC of this customer is not approved (<field name="ahps_kyc_state" readonly="1" class="d-inline"/>).
+                    The quotation can be prepared, but it cannot be sent or confirmed until the KYC is approved.
+                </div>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="ahps_customer_number" invisible="not ahps_customer_number"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

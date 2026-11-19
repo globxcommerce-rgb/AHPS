@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Line grid shared by quotation, PFI and invoice -->
+    <template id="ahps_line_grid">
+        <table class="ahps-grid">
+            <colgroup>
+                <col style="width: 6%;"/>
+                <col style="width: 4.5%;"/>
+                <col style="width: 9%;"/>
+                <col t-att-style="'width: 34%;' if ahps_tariff else 'width: 46.5%;'"/>
+                <col t-if="ahps_tariff" style="width: 12.5%;"/>
+                <col style="width: 12%;"/>
+                <col style="width: 8%;"/>
+                <col style="width: 14%;"/>
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>POS</th><th>QTY</th><th t-out="ahps_code_label"/><th>DESCRIPTION</th>
+                    <th t-if="ahps_tariff">Cust. Tariff</th>
+                    <th>UNIT PRICE</th><th>DISC (%)</th><th>TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="ahps_rows" t-as="row">
+                    <td class="c" t-out="row.get('pos', '')"/>
+                    <td class="c" t-out="row.get('qty', '')"/>
+                    <td class="c" t-out="row.get('code', '')"/>
+                    <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
+                    <td t-if="ahps_tariff" class="r" t-out="row.get('tariff', '')"/>
+                    <td class="r"><t t-if="row.get('price')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['price']"/></t></td>
+                    <td class="c" t-out="row.get('disc', '')"/>
+                    <td class="r"><t t-if="row.get('total')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['total']"/></t></td>
+                </tr>
+            </tbody>
+        </table>
+    </template>
+
+    <!-- Quotation / Sales Order and Pro Forma Invoice -->
+    <template id="report_saleorder_document">
+        <t t-set="doc" t-value="doc.with_context(lang=doc.partner_id.lang)"/>
+        <t t-set="o" t-value="doc"/>
+        <t t-set="is_proforma" t-value="env.context.get('proforma', False) or is_pro_forma"/>
+        <t t-set="ahps_footer_logos" t-value="True"/>
+        <t t-call="ahps_reports.ahps_layout">
+            <t t-set="t" t-value="doc._ahps_report_totals()"/>
+            <t t-if="is_proforma">
+                <t t-set="ahps_title">PROFORMA INVOICE</t>
+                <t t-set="ahps_number" t-value="doc.ahps_pfi_number or doc.name"/>
+            </t>
+            <t t-elif="doc.state in ('draft', 'sent')">
+                <t t-set="ahps_title">QUOTATION</t>
+                <t t-set="ahps_number" t-value="doc.name"/>
+            </t>
+            <t t-else="">
+                <t t-set="ahps_title">ORDER CONFIRMATION</t>
+                <t t-set="ahps_number" t-value="doc.name"/>
+            </t>
+            <t t-set="ahps_show_bank" t-value="True"/>
+            <t t-set="ahps_bank_account_name" t-value="not is_proforma"/>
+            <t t-call="ahps_reports.ahps_doc_top">
+            <!-- Customer details | Quotation / PFI details -->
+            <table class="ahps-box" style="width: 100%;">
+                <tr>
+                    <td style="width: 58%; border-right: 1px solid #000;">
+                        <div class="ahps-h">CUSTOMER DETAILS</div>
+                        <t t-set="ahps_partner" t-value="doc.partner_id"/>
+                        <t t-set="ahps_attn_top" t-value="True"/>
+                        <t t-set="ahps_show_function" t-value="True"/>
+                        <t t-set="ahps_bold_email" t-value="is_proforma"/>
+                        <t t-call="ahps_reports.ahps_partner_block"/>
+                    </td>
+                    <td style="width: 42%;">
+                        <div class="ahps-h" t-out="'PROFORMA INVOICE DETAILS' if is_proforma else 'QUOTATION DETAILS'"/>
+                        <table class="ahps-kv" style="width: 100%;">
+                            <t t-if="is_proforma">
+                                <tr><td class="k">PFI Date:</td><td t-out="doc._ahps_fmt_date(doc.ahps_pfi_date or doc.date_order)"/></tr>
+                                <tr><td class="k">PFI No.:</td><td t-out="doc.ahps_pfi_number or doc.name"/></tr>
+                            </t>
+                            <t t-else="">
+                                <tr><td class="k">Date:</td><td t-out="doc._ahps_fmt_date(doc.date_order)"/></tr>
+                                <tr><td class="k">Quote No.:</td><td t-out="doc.name"/></tr>
+                            </t>
+                            <tr><td class="k">Customer ID:</td><td t-out="doc.partner_id.commercial_partner_id.ahps_customer_number or ''"/></tr>
+                            <tr><td class="k">Valid Until:</td><td t-out="doc._ahps_fmt_date(doc.validity_date)"/></tr>
+                            <tr t-if="not is_proforma and doc.client_order_ref"><td class="k">RFQ Ref.:</td><td t-out="doc.client_order_ref"/></tr>
+                            <tr t-if="is_proforma and doc.client_order_ref"><td class="k">Your PO:</td><td t-out="doc.client_order_ref"/></tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            </t>
+
+            <t t-set="ahps_rows" t-value="doc._ahps_report_rows(min_rows=26 if is_proforma else 28)"/>
+            <t t-set="ahps_code_label" t-value="'ID NO.' if is_proforma else ('S/N' if t['has_service'] else '')"/>
+            <t t-set="ahps_tariff" t-value="False"/>
+            <t t-call="ahps_reports.ahps_line_grid"/>
+
+            <!-- Terms and conditions | totals -->
+            <table style="width: 100%; page-break-inside: avoid;">
+                <tr>
+                    <td style="width: 64%; vertical-align: top; padding-top: 8px;">
+                        <div class="ahps-gridbox" style="padding: 2px 4px; min-height: 150px;">
+                            <div style="font-weight: bold;">TERMS AND CONDITIONS<t t-if="not is_proforma">:</t></div>
+                            <t t-set="sep" t-value="'' if is_proforma else ': '"/>
+                            <table class="ahps-terms" style="width: 100%;">
+                                <tr><td style="width: 32%;">Delivery Terms</td><td><t t-out="sep"/><t t-out="doc._ahps_delivery_terms()"/></td></tr>
+                                <tr><td>Lead Time</td><td><t t-out="sep"/><t t-out="doc.ahps_lead_time or 'N/A'"/></td></tr>
+                                <t t-if="is_proforma">
+                                    <tr><td>Port of Loading</td><td t-out="doc.ahps_port_loading or 'N/A'"/></tr>
+                                    <tr><td>Port of Destination</td><td t-out="doc.ahps_port_destination or 'N/A'"/></tr>
+                                </t>
+                                <tr><td>Packing Details</td><td><t t-out="sep"/><t t-out="doc.ahps_packing_details or 'N/A'"/></td></tr>
+                                <tr><td>Gross Weight</td><td><t t-out="sep"/><t t-out="doc.ahps_gross_weight or 'N/A'"/></td></tr>
+                                <tr><td>Payment Terms</td><td>: <t t-out="doc.payment_term_id.name or 'N/A'"/></td></tr>
+                                <tr><td>&amp;nbsp;</td><td/></tr>
+                                <tr t-if="doc.company_id.ahps_handling_charges"><td>Handling Charges</td><td><t t-out="sep"/><t t-out="doc.company_id.ahps_handling_charges"/></td></tr>
+                            </table>
+                            <div style="margin: 6px 0 4px 100px;">
+                                <span class="ahps-sign" t-out="doc.company_id.ahps_doc_signatory or ''"/>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="width: 36%; vertical-align: top;">
+                        <table class="ahps-totals" style="width: 100%;">
+                            <colgroup><col style="width: 52%;"/><col style="width: 10%;"/><col style="width: 38%;"/></colgroup>
+                            <t t-if="is_proforma">
+                                <tr><td class="b" style="text-align: right; font-style: italic;">Total Ex-works<t t-if="doc.incoterm_location"> (<t t-out="doc.incoterm_location"/>)</t></td>
+                                    <td class="b" t-out="t['symbol']"/><td class="b" style="text-align: right;" t-out="t['exworks']"/></tr>
+                                <tr><td class="b">Shipping</td><td style="font-style: italic;" t-out="t['symbol']"/><td style="text-align: right;" t-out="t['shipping']"/></tr>
+                                <tr><td class="b" style="font-style: italic;">Total CPT</td><td class="b" t-out="t['symbol']"/><td style="text-align: right;" class="b" t-out="t['cpt']"/></tr>
+                                <tr><td t-out="t['tax_label']"/><td/><td style="text-align: center;" t-out="t['tax_rate']"/></tr>
+                                <tr><td class="b">Tax Due</td><td t-out="t['symbol']"/><td style="text-align: right;" t-out="t['tax_due']"/></tr>
+                                <tr style="border-bottom: 2px solid #000;"><td>Others</td><td t-out="t['symbol']"/><td style="text-align: right;" t-out="t['others']"/></tr>
+                                <tr><td class="b">TOTAL Due</td><td class="b" t-out="t['symbol']"/><td class="b" style="text-align: right;" t-out="t['total']"/></tr>
+                            </t>
+                            <t t-else="">
+                                <tr><td class="b" style="font-style: italic;" t-out="'Subtotal' if t['has_service'] else 'Total'"/>
+                                    <td class="b" style="font-style: italic;" t-out="t['symbol']"/><td class="b" style="text-align: right; font-style: italic;" t-out="t['subtotal']"/></tr>
+                                <tr><td>Taxable</td><td t-out="t['symbol']"/><td style="text-align: right;" t-out="t['taxable']"/></tr>
+                                <tr><td t-out="t['tax_label']"/><td/><td style="text-align: center;" t-out="t['tax_rate']"/></tr>
+                                <tr><td class="b">Tax Due</td><td class="b" t-out="t['symbol']"/><td style="text-align: right;" t-out="t['tax_due']"/></tr>
+                                <tr style="border-bottom: 1px solid #000;"><td>Others</td><td t-out="t['symbol']"/><td style="text-align: right;" t-out="t['others']"/></tr>
+                                <tr><td>TOTAL Due</td><td class="b" t-out="t['symbol']"/><td class="b" style="text-align: right;" t-out="t['total']"/></tr>
+                            </t>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <t t-set="ahps_doc_label" t-value="'quotation'"/>
+            <t t-call="ahps_reports.ahps_doc_bottom"/>
+        </t>
+    </template>
+
+    <!-- Hook the aHPS layout into the standard print actions -->
+    <template id="report_saleorder_raw_ahps" inherit_id="sale.report_saleorder_raw">
+        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="attributes">
+            <attribute name="t-call">ahps_reports.report_saleorder_document</attribute>
+        </xpath>
+    </template>
+    <template id="report_saleorder_pro_forma_ahps" inherit_id="sale.report_saleorder_pro_forma">
+        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="attributes">
+            <attribute name="t-call">ahps_reports.report_saleorder_document</attribute>
+        </xpath>
+    </template>
+</odoo>

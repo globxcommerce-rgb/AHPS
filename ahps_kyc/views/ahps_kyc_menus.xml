@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_ahps_kyc_root" name="KYC" parent="contacts.menu_contacts" sequence="5"
+              groups="ahps_kyc.group_ahps_kyc_user"/>
+    <menuitem id="menu_ahps_kyc_customers" name="Customer KYC" parent="menu_ahps_kyc_root"
+              action="action_ahps_kyc_customers" sequence="1"/>
+    <menuitem id="menu_ahps_kyc_to_review" name="KYC to Review" parent="menu_ahps_kyc_root"
+              action="action_ahps_kyc_to_review" sequence="2" groups="ahps_kyc.group_ahps_kyc_manager"/>
+    <menuitem id="menu_ahps_kyc_document_types" name="KYC Document Types" parent="contacts.res_partner_menu_config"
+              action="action_ahps_kyc_document_type" sequence="50" groups="ahps_kyc.group_ahps_kyc_manager"/>
+</odoo>

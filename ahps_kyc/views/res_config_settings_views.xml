@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_ahps_kyc" model="ir.ui.view">
+        <field name="name">res.config.settings.form.ahps.kyc</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='sale_management']" position="inside">
+                <block title="Customer KYC (aHPS)" name="ahps_kyc_setting_container">
+                    <setting id="ahps_kyc_required" string="Require approved KYC"
+                             help="Quotations cannot be sent or confirmed, and customer invoices cannot be posted, until the customer's KYC is approved.">
+                        <field name="ahps_kyc_required"/>
+                    </setting>
+                    <setting id="ahps_kyc_form" string="Blank KYC form"
+                             help="Attached automatically to the KYC request email sent to new customers.">
+                        <field name="ahps_kyc_form" filename="ahps_kyc_form_name"/>
+                        <field name="ahps_kyc_form_name" invisible="1"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
