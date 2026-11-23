@@ -1,4 +1,5 @@
 import re
+import uuid
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -11,19 +12,9 @@ KYC_STATES = [
     ("rejected", "Rejected"),
 ]
 
-CUSTOMER_TYPES = [
-    ("end_user", "A - End User"),
-    ("reseller", "B - Reseller"),
-]
-
-END_USER_SUBCATEGORIES = [
-    ("brewery", "Breweries"),
-    ("soft_drink", "Soft Drinks"),
-    ("water", "Water"),
-    ("institute", "Institutes (Schools, Universities, Labs)"),
-    ("wine_spirits", "Wine & Spirits"),
-    ("dairy", "Dairy"),
-    ("rest", "Rest"),
+REGISTRATION_TYPES = [
+    ("customer", "Customer"),
+    ("supplier", "Supplier"),
 ]
 
 CUSTOMER_NUMBER_RE = re.compile(r"^\d{4}\.\d{3,}$")
@@ -43,7 +34,7 @@ class ResPartner(models.Model):
     ahps_kyc_approved_by_id = fields.Many2one("res.users", string="KYC Approved By", copy=False, readonly=True)
     ahps_kyc_rejection_reason = fields.Text(string="Rejection Reason", copy=False, readonly=True)
     ahps_kyc_commercial_state = fields.Selection(
-        KYC_STATES, string="Customer KYC Status", compute="_compute_ahps_kyc_commercial_state",
+        KYC_STATES, string="Company KYC Status", compute="_compute_ahps_kyc_commercial_state",
         help="KYC status of the company this contact belongs to.",
     )
 
@@ -66,13 +57,32 @@ class ResPartner(models.Model):
     )
     ahps_group_member_ids = fields.One2many("res.partner", "ahps_company_group_id", string="Group Companies")
 
-    # ---- Categorisation ---------------------------------------------------
-    ahps_customer_type = fields.Selection(CUSTOMER_TYPES, string="Customer Category", tracking=True)
-    ahps_customer_subcategory = fields.Selection(
-        END_USER_SUBCATEGORIES, string="End-User Subcategory", tracking=True,
+    # ---- Registration -----------------------------------------------------
+    ahps_registration_type = fields.Selection(
+        REGISTRATION_TYPES, string="Registers As", default="customer", tracking=True,
+        help="Customers get a customer ID on approval; suppliers are registered for purchasing.",
+    )
+    ahps_company_group_name = fields.Char(
+        string="Company Group (declared)",
+        help="Group or conglomerate as declared by the customer on the KYC form.",
+    )
+    ahps_kyc_token = fields.Char(string="KYC Form Token", copy=False, groups="base.group_user")
+    ahps_kyc_url = fields.Char(string="Online KYC Form", compute="_compute_ahps_kyc_url")
+    ahps_kyc_submitted_online = fields.Boolean(string="Submitted Online", copy=False, readonly=True)
+    ahps_kyc_declared_by = fields.Char(string="Declared By", copy=False, readonly=True)
+    ahps_kyc_declared_position = fields.Char(string="Declarant Position", copy=False, readonly=True)
+    ahps_kyc_declaration_date = fields.Datetime(string="Declaration Date", copy=False, readonly=True)
+    ahps_category_tag_ids = fields.Many2many(
+        "res.partner.category", string="Customer Category", compute="_compute_ahps_category_tag_ids",
+        help="aHPS customer category tags (End User and its sectors, Reseller).",
     )
 
     # ---- KYC contacts -----------------------------------------------------
+    ahps_authorized_contact_id = fields.Many2one(
+        "res.partner", string="Authorized Person",
+        domain="[('parent_id', '=', id)]",
+        help="Person authorised to commit the company (sign orders / contracts).",
+    )
     ahps_main_contact_id = fields.Many2one(
         "res.partner", string="Contact Person",
         domain="[('parent_id', '=', id)]",
@@ -113,6 +123,33 @@ class ResPartner(models.Model):
     def _compute_ahps_kyc_commercial_state(self):
         for partner in self:
             partner.ahps_kyc_commercial_state = partner.commercial_partner_id.ahps_kyc_state
+
+    @api.model
+    def _ahps_category_roots(self):
+        roots = self.env["res.partner.category"]
+        for xmlid in ("ahps_kyc.partner_tag_end_user", "ahps_kyc.partner_tag_reseller"):
+            tag = self.env.ref(xmlid, raise_if_not_found=False)
+            if tag:
+                roots |= tag
+        return roots
+
+    @api.depends("category_id")
+    def _compute_ahps_category_tag_ids(self):
+        tags = self.env["res.partner.category"].search([("id", "child_of", self._ahps_category_roots().ids)])
+        for partner in self:
+            partner.ahps_category_tag_ids = partner.category_id & tags
+
+    def _compute_ahps_kyc_url(self):
+        base_url = self.get_base_url() if self else ""
+        for partner in self:
+            token = partner.sudo().ahps_kyc_token
+            partner.ahps_kyc_url = f"{base_url}/kyc/{partner.id}/{token}" if token and partner.id else False
+
+    def _ahps_ensure_kyc_token(self):
+        for partner in self.sudo():
+            if not partner.ahps_kyc_token:
+                partner.ahps_kyc_token = uuid.uuid4().hex
+        return True
 
     @api.depends("ahps_kyc_document_ids")
     def _compute_ahps_kyc_document_count(self):
@@ -160,11 +197,6 @@ class ResPartner(models.Model):
                     number=partner.ahps_customer_number,
                 ))
 
-    @api.onchange("ahps_customer_type")
-    def _onchange_ahps_customer_type(self):
-        if self.ahps_customer_type != "end_user":
-            self.ahps_customer_subcategory = False
-
     # ----------------------------------------------------------------------
     # KYC workflow
     # ----------------------------------------------------------------------
@@ -179,34 +211,42 @@ class ResPartner(models.Model):
     def _ahps_get_kyc_missing_information(self):
         """Return the list of missing KYC items for this company."""
         self.ensure_one()
-        missing = []
+        _ = self.env._
+        is_supplier = self.ahps_registration_type == "supplier"
         checks = [
-            (self.name, self.env._("Company name")),
-            (self.street or self.ahps_postal_address, self.env._("Physical or postal address")),
-            (self.city, self.env._("City")),
-            (self.country_id, self.env._("Country")),
-            (self.phone, self.env._("Phone number")),
-            (self.email, self.env._("Email address")),
-            (self.vat, self.env._("Tax Identification Number (TIN)")),
-            (self.ahps_company_registry, self.env._("Company registration number")),
-            (self.ahps_customer_type, self.env._("Customer category (End User / Reseller)")),
-            (self.ahps_main_contact_id, self.env._("Contact person")),
-            (self.ahps_procurement_contact_id, self.env._("Procurement contact")),
-            (self.ahps_finance_contact_id, self.env._("Finance contact")),
+            (self.name, _("Company name")),
+            (self.street or self.ahps_postal_address, _("Physical or postal address")),
+            (self.city, _("City")),
+            (self.country_id, _("Country")),
+            (self.phone, _("Phone number")),
+            (self.email, _("Email address")),
+            (self.vat, _("Tax Identification Number (TIN)")),
+            (self.ahps_company_registry, _("Company registration number")),
+            (self.ahps_main_contact_id, _("Contact person")),
         ]
-        missing += [label for value, label in checks if not value]
-        if self.ahps_customer_type == "end_user" and not self.ahps_customer_subcategory:
-            missing.append(self.env._("End-user subcategory"))
+        if is_supplier:
+            checks += [
+                (self.ahps_authorized_contact_id, _("Authorized person")),
+                (self.bank_ids, _("Bank account")),
+            ]
+        else:
+            checks += [
+                (self.ahps_category_tag_ids, _("Customer category tag (End User sector or Reseller)")),
+                (self.ahps_procurement_contact_id, _("Procurement contact")),
+                (self.ahps_finance_contact_id, _("Finance contact")),
+            ]
+        missing = [label for value, label in checks if not value]
         attached_types = self.ahps_kyc_document_ids.document_type_id
-        for doc_type in self.env["ahps.kyc.document.type"].search([("required", "=", True)]):
+        for doc_type in self.env["ahps.kyc.document.type"]._ahps_required_types(self.ahps_registration_type):
             if doc_type not in attached_types:
-                missing.append(self.env._("Document: %s", doc_type.name))
+                missing.append(_("Document: %s", doc_type.name))
         return missing
 
     def action_ahps_kyc_send_request(self):
         """Open the email composer to send the blank KYC form to the customer."""
         self.ensure_one()
         self._ahps_check_kyc_company()
+        self._ahps_ensure_kyc_token()
         template = self.env.ref("ahps_kyc.mail_template_ahps_kyc_request", raise_if_not_found=False)
         ctx = {
             "default_model": "res.partner",
@@ -235,6 +275,7 @@ class ResPartner(models.Model):
 
     def action_ahps_kyc_mark_requested(self):
         self._ahps_check_kyc_company()
+        self._ahps_ensure_kyc_token()
         self.write({"ahps_kyc_state": "requested", "ahps_kyc_requested_date": fields.Datetime.now()})
 
     def action_ahps_kyc_submit(self):
@@ -246,6 +287,9 @@ class ResPartner(models.Model):
                     "The KYC of %(name)s cannot be submitted. Missing information:\n- %(items)s",
                     name=partner.display_name, items="\n- ".join(missing),
                 ))
+        self._ahps_kyc_mark_submitted()
+
+    def _ahps_kyc_mark_submitted(self):
         self.write({
             "ahps_kyc_state": "submitted",
             "ahps_kyc_submitted_date": fields.Datetime.now(),
@@ -253,7 +297,8 @@ class ResPartner(models.Model):
         })
         reviewers = self.env.ref("ahps_kyc.group_ahps_kyc_manager").all_user_ids.filtered(lambda u: not u.share and u.active)
         for partner in self:
-            for user in reviewers:
+            open_reviews = partner.activity_ids.filtered(lambda a: a.summary == self.env._("Review KYC")).user_id
+            for user in reviewers - open_reviews:
                 partner.activity_schedule(
                     "mail.mail_activity_data_todo",
                     user_id=user.id,
@@ -266,10 +311,24 @@ class ResPartner(models.Model):
             raise UserError(self.env._("Only KYC Managers can approve or reject a KYC."))
 
     def _ahps_next_customer_number(self, registration_date):
-        seq = self.env["ir.sequence"].next_by_code("ahps.customer.number")
-        if not seq:
+        """Next customer ID: registration year + running number.
+
+        The running number continues after the highest number already used, so imported
+        customers (e.g. up to 2026.231) are followed by 232 without manual set-up.
+        """
+        sequence = self.env["ir.sequence"].sudo().search([("code", "=", "ahps.customer.number")], limit=1)
+        if not sequence:
             raise UserError(self.env._("The sequence 'ahps.customer.number' is missing."))
-        return f"{registration_date.year}.{seq}"
+        self.env.flush_all()
+        self.env.cr.execute("""
+            SELECT MAX(CAST(SPLIT_PART(ahps_customer_number, '.', 2) AS INTEGER))
+              FROM res_partner
+             WHERE ahps_customer_number ~ '^[0-9]{4}\\.[0-9]+$'
+        """)
+        highest = self.env.cr.fetchone()[0] or 0
+        if sequence.number_next_actual <= highest:
+            sequence.number_next_actual = highest + 1
+        return f"{registration_date.year}.{sequence.next_by_id()}"
 
     def action_ahps_kyc_approve(self):
         self._ahps_check_kyc_manager()
@@ -287,10 +346,14 @@ class ResPartner(models.Model):
             reg_date = partner.ahps_registration_date or today
             if not partner.ahps_registration_date:
                 vals["ahps_registration_date"] = reg_date
-            if not partner.ahps_customer_number:
-                vals["ahps_customer_number"] = partner._ahps_next_customer_number(reg_date)
-            if not partner.customer_rank:
-                vals["customer_rank"] = 1
+            if partner.ahps_registration_type == "supplier":
+                if not partner.supplier_rank:
+                    vals["supplier_rank"] = 1
+            else:
+                if not partner.ahps_customer_number:
+                    vals["ahps_customer_number"] = partner._ahps_next_customer_number(reg_date)
+                if not partner.customer_rank:
+                    vals["customer_rank"] = 1
             partner.write(vals)
             partner.activity_feedback(["mail.mail_activity_data_todo"],
                                       feedback=self.env._("KYC approved"))
@@ -308,12 +371,16 @@ class ResPartner(models.Model):
             "context": {"default_partner_ids": self.ids},
         }
 
-    def _ahps_kyc_do_reject(self, reason):
+    def _ahps_kyc_do_reject(self, reason, notify=False):
         self.write({"ahps_kyc_state": "rejected", "ahps_kyc_rejection_reason": reason})
+        template = self.env.ref("ahps_kyc.mail_template_ahps_kyc_rejected", raise_if_not_found=False)
         for partner in self:
             partner.message_post(body=self.env._("KYC rejected: %s", reason))
             partner.activity_feedback(["mail.mail_activity_data_todo"],
                                       feedback=self.env._("KYC rejected"))
+            if notify and template and partner.email:
+                partner._ahps_ensure_kyc_token()
+                partner.message_post_with_source(template, subtype_xmlid="mail.mt_comment")
 
     def action_ahps_kyc_reset(self):
         self._ahps_check_kyc_manager()

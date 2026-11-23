@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="res_groups_privilege_ahps_kyc" model="res.groups.privilege">
-        <field name="name">Customer KYC</field>
+        <field name="name">KYC</field>
         <field name="sequence">30</field>
         <field name="category_id" ref="base.module_category_sales"/>
     </record>

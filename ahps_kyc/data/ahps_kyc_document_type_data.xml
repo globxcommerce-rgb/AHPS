@@ -1,20 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <record id="kyc_doc_type_kyc_form" model="ahps.kyc.document.type">
-        <field name="name">Signed KYC Form</field>
-        <field name="sequence">1</field>
-        <field name="required" eval="True"/>
-    </record>
     <record id="kyc_doc_type_incorporation" model="ahps.kyc.document.type">
         <field name="name">Certificate of Incorporation / Registration</field>
-        <field name="sequence">2</field>
+        <field name="sequence">1</field>
+        <field name="applies_to">both</field>
+        <field name="required" eval="True"/>
     </record>
     <record id="kyc_doc_type_tax" model="ahps.kyc.document.type">
         <field name="name">Tax Registration (TIN) Certificate</field>
+        <field name="sequence">2</field>
+        <field name="applies_to">both</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="kyc_doc_type_tax_compliance" model="ahps.kyc.document.type">
+        <field name="name">Tax Compliance Certificate (latest)</field>
         <field name="sequence">3</field>
+        <field name="applies_to">supplier</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="kyc_doc_type_business_license" model="ahps.kyc.document.type">
+        <field name="name">Valid Business License</field>
+        <field name="sequence">4</field>
+        <field name="applies_to">supplier</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="kyc_doc_type_bank_letter" model="ahps.kyc.document.type">
+        <field name="name">Bank Letter Confirming the Bank Account</field>
+        <field name="sequence">5</field>
+        <field name="applies_to">supplier</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="kyc_doc_type_kyc_form" model="ahps.kyc.document.type">
+        <field name="name">Signed KYC Form (paper)</field>
+        <field name="sequence">20</field>
+        <field name="applies_to">both</field>
+        <field name="portal_visible" eval="False"/>
     </record>
     <record id="kyc_doc_type_other" model="ahps.kyc.document.type">
         <field name="name">Other</field>
         <field name="sequence">99</field>
+        <field name="portal_visible" eval="False"/>
     </record>
 </odoo>

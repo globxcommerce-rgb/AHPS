@@ -4,8 +4,9 @@
         <t t-set="cp" t-value="company.partner_id"/>
         <t t-set="banks" t-value="company._ahps_bank_accounts()"/>
         <div class="ahps-cbox" style="position: relative; font-size: 10px;">
-            <img t-if="company.ahps_show_accreditation" src="/ahps_reports/static/img/iso_17025.png"
-                 style="position: absolute; right: 6px; top: 4px; height: 44px;" alt="ISO/IEC 17025"/>
+            <t t-set="badge" t-value="company._ahps_document_logos('accreditation')[:1] if company.ahps_show_accreditation else False"/>
+            <img t-if="badge" t-att-src="image_data_uri(badge.image)"
+                 style="position: absolute; right: 6px; top: 4px; height: 44px;" t-att-alt="badge.name"/>
             <div t-out="company.name"/>
             <div t-if="cp.street" t-out="cp.street"/>
             <div t-if="cp.street2" t-out="cp.street2"/>
@@ -105,7 +106,7 @@
                 </tr>
             </table>
 
-            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=36)"/>
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=0)"/>
             <t t-set="ahps_code_label">Art No.</t>
             <t t-set="ahps_tariff" t-value="True"/>
             <t t-call="ahps_reports.ahps_line_grid"/>

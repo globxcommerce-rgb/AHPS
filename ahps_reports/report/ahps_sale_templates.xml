@@ -90,7 +90,7 @@
             </table>
             </t>
 
-            <t t-set="ahps_rows" t-value="doc._ahps_report_rows(min_rows=26 if is_proforma else 28)"/>
+            <t t-set="ahps_rows" t-value="doc._ahps_report_rows(min_rows=0)"/>
             <t t-set="ahps_code_label" t-value="'ID NO.' if is_proforma else ('S/N' if t['has_service'] else '')"/>
             <t t-set="ahps_tariff" t-value="False"/>
             <t t-call="ahps_reports.ahps_line_grid"/>

@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- One contact person block on the KYC form -->
+    <template id="portal_kyc_contact_block">
+        <t t-set="role_required" t-value="req_supplier if values.get('registration_type') == 'supplier' else req_customer"/>
+        <div class="col-12 ahps-kyc-contact" t-att-data-required-customer="'1' if req_customer else '0'"
+             t-att-data-required-supplier="'1' if req_supplier else '0'" t-att-data-role="prefix">
+            <div class="d-flex align-items-center mt-3 mb-1">
+                <h6 class="mb-0 me-3"><t t-out="label"/><span class="text-danger ahps-req-mark">*</span>
+                    <small t-if="prefix == 'procurement'" class="text-muted fw-normal"> (receives quotations, sends purchase orders)</small>
+                    <small t-if="prefix == 'finance'" class="text-muted fw-normal"> (receives invoices, processes payments)</small>
+                    <small t-if="prefix == 'authorized'" class="text-muted fw-normal"> (authorised to sign for the company)</small>
+                </h6>
+                <div t-if="prefix != 'contact'" class="form-check mb-0">
+                    <input class="form-check-input ahps-same-contact" type="checkbox" t-attf-name="#{prefix}_same"
+                           t-attf-id="#{prefix}_same" t-att-checked="values.get(prefix + '_same') and 'checked'"/>
+                    <label class="form-check-label small" t-attf-for="#{prefix}_same">Same as contact person</label>
+                </div>
+            </div>
+            <div class="row g-2 ahps-contact-fields">
+                <div class="col-md-3"><input type="text" class="form-control" t-attf-name="#{prefix}_name" placeholder="Full name" t-att-value="values.get(prefix + '_name')"/></div>
+                <div class="col-md-3"><input type="text" class="form-control" t-attf-name="#{prefix}_function" placeholder="Position" t-att-value="values.get(prefix + '_function')"/></div>
+                <div class="col-md-3"><input type="email" class="form-control" t-attf-name="#{prefix}_email" placeholder="Email" t-att-value="values.get(prefix + '_email')"/></div>
+                <div class="col-md-3"><input type="text" class="form-control" t-attf-name="#{prefix}_phone" placeholder="Phone" t-att-value="values.get(prefix + '_phone')"/></div>
+            </div>
+        </div>
+    </template>
+
+    <template id="portal_kyc_address_block">
+        <div class="col-12 mt-3">
+            <div class="d-flex align-items-center mb-1">
+                <h6 class="mb-0 me-3" t-out="label"/>
+                <div class="form-check mb-0">
+                    <input class="form-check-input ahps-same-address" type="checkbox" t-attf-name="#{addr}_same" t-attf-id="#{addr}_same"
+                           t-att-checked="values.get(addr + '_same') and 'checked'"/>
+                    <label class="form-check-label small" t-attf-for="#{addr}_same">Same as physical address</label>
+                </div>
+            </div>
+            <div class="row g-2 ahps-address-fields">
+                <div class="col-md-6"><input type="text" class="form-control" t-attf-name="#{addr}_street" placeholder="Street / building" t-att-value="values.get(addr + '_street')"/></div>
+                <div class="col-md-3"><input type="text" class="form-control" t-attf-name="#{addr}_city" placeholder="City" t-att-value="values.get(addr + '_city')"/></div>
+                <div class="col-md-3">
+                    <select class="form-select" t-attf-name="#{addr}_country_id">
+                        <option value="">Country...</option>
+                        <t t-foreach="countries" t-as="c">
+                            <option t-att-value="c.id" t-att-selected="str(values.get(addr + '_country_id')) == str(c.id)" t-out="c.name"/>
+                        </t>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="portal_kyc_form" name="aHPS KYC Form">
+        <t t-call="portal.frontend_layout">
+            <t t-set="no_footer" t-value="True"/>
+            <div id="wrap" class="o_ahps_kyc bg-light py-4">
+                <div class="container" style="max-width: 980px;">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <img t-att-src="'/logo.png?company=%s' % company.id" style="max-height: 56px;" alt="Logo"/>
+                                <div class="text-end small text-muted">
+                                    <div t-out="company.name"/>
+                                    <div t-out="company.email"/>
+                                </div>
+                            </div>
+                            <h3 class="mt-3 mb-1">Customer &amp; Supplier Registration (KYC)</h3>
+                            <p class="text-muted">Please complete this form so we can register your company.
+                                Fields marked <span class="text-danger">*</span> are required.</p>
+
+                            <div t-if="partner and partner.ahps_kyc_state == 'rejected'" class="alert alert-warning">
+                                <strong>Your previous submission needs a correction:</strong>
+                                <div t-out="partner.ahps_kyc_rejection_reason"/>
+                            </div>
+                            <div t-if="errors" class="alert alert-danger">
+                                <strong>Please correct the following:</strong>
+                                <ul class="mb-0"><li t-foreach="errors" t-as="err" t-out="err"/></ul>
+                            </div>
+
+                            <form t-att-action="action_url" method="post" enctype="multipart/form-data" id="ahps_kyc_form">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="text" name="website_url" value="" tabindex="-1" autocomplete="off"
+                                       style="position: absolute; left: -5000px;" aria-hidden="true"/>
+
+                                <!-- 1. Registration type -->
+                                <h5 class="border-bottom pb-1 mt-3">1. You are registering as</h5>
+                                <div class="d-flex gap-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input ahps-regtype" type="radio" name="registration_type" id="rt_customer" value="customer"
+                                               t-att-checked="values.get('registration_type', 'customer') == 'customer' and 'checked'"/>
+                                        <label class="form-check-label" for="rt_customer">Customer <small class="text-muted">(you buy from aHPS)</small></label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input ahps-regtype" type="radio" name="registration_type" id="rt_supplier" value="supplier"
+                                               t-att-checked="values.get('registration_type') == 'supplier' and 'checked'"/>
+                                        <label class="form-check-label" for="rt_supplier">Supplier <small class="text-muted">(you sell to aHPS)</small></label>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Company -->
+                                <h5 class="border-bottom pb-1 mt-4">2. Company information</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6"><label class="form-label">Company name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="name" required="required" t-att-value="values.get('name')"/></div>
+                                    <div class="col-md-3"><label class="form-label">Registration No. <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="company_registry" required="required" t-att-value="values.get('company_registry')"/></div>
+                                    <div class="col-md-3"><label class="form-label">Tax ID (TIN) <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="vat" required="required" t-att-value="values.get('vat')"/></div>
+                                    <div class="col-md-4"><label class="form-label">Phone <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="phone" required="required" t-att-value="values.get('phone')"/></div>
+                                    <div class="col-md-4"><label class="form-label">Email <span class="text-danger">*</span></label>
+                                        <input type="email" class="form-control" name="email" required="required" t-att-value="values.get('email')"/></div>
+                                    <div class="col-md-4"><label class="form-label">Website</label>
+                                        <input type="text" class="form-control" name="website" t-att-value="values.get('website')"/></div>
+                                    <div class="col-md-6"><label class="form-label">Company group <small class="text-muted">(if part of a group / conglomerate)</small></label>
+                                        <input type="text" class="form-control" name="company_group" t-att-value="values.get('company_group')"/></div>
+                                    <div class="col-md-6 ahps-customer-only">
+                                        <label class="form-label">Type of company <span class="text-danger">*</span></label>
+                                        <div class="d-flex gap-3 align-items-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="category" id="cat_end_user" value="end_user"
+                                                       t-att-checked="values.get('category') == 'end_user' and 'checked'"/>
+                                                <label class="form-check-label" for="cat_end_user">End user</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="category" id="cat_reseller" value="reseller"
+                                                       t-att-checked="values.get('category') == 'reseller' and 'checked'"/>
+                                                <label class="form-check-label" for="cat_reseller">Reseller / distributor / trader</label>
+                                            </div>
+                                        </div>
+                                        <select class="form-select mt-2 ahps-sector" name="sector_id">
+                                            <option value="">Sector (end users)...</option>
+                                            <t t-foreach="sectors" t-as="sector">
+                                                <option t-att-value="sector.id" t-att-selected="str(values.get('sector_id')) == str(sector.id)" t-out="sector.name"/>
+                                            </t>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Addresses -->
+                                <h5 class="border-bottom pb-1 mt-4">3. Addresses</h5>
+                                <div class="row g-2">
+                                    <div class="col-12"><h6 class="mb-1">Physical address <span class="text-danger">*</span></h6></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" name="street" placeholder="Street / building" required="required" t-att-value="values.get('street')"/></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" name="street2" placeholder="Area / district" t-att-value="values.get('street2')"/></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" name="city" placeholder="City" required="required" t-att-value="values.get('city')"/></div>
+                                    <div class="col-md-6">
+                                        <select class="form-select" name="country_id" required="required">
+                                            <option value="">Country...</option>
+                                            <t t-foreach="countries" t-as="c">
+                                                <option t-att-value="c.id" t-att-selected="str(values.get('country_id')) == str(c.id)" t-out="c.name"/>
+                                            </t>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mt-3"><label class="form-label mb-1">Mailing / postal address</label>
+                                        <input type="text" class="form-control" name="postal_address" placeholder="e.g. P.O. Box 1325 - 00621" t-att-value="values.get('postal_address')"/></div>
+                                    <t t-foreach="[('invoice', 'Invoice / billing address'), ('delivery', 'Delivery address')]" t-as="ab">
+                                        <t t-set="addr" t-value="ab[0]"/>
+                                        <t t-set="label" t-value="ab[1]"/>
+                                        <t t-call="ahps_kyc.portal_kyc_address_block"/>
+                                    </t>
+                                </div>
+
+                                <!-- 4. Contact persons -->
+                                <h5 class="border-bottom pb-1 mt-4">4. Contact persons</h5>
+                                <div class="row">
+                                    <t t-foreach="contact_roles" t-as="role">
+                                        <t t-set="prefix" t-value="role[0]"/>
+                                        <t t-set="label" t-value="role[2]"/>
+                                        <t t-set="req_customer" t-value="role[3]"/>
+                                        <t t-set="req_supplier" t-value="role[4]"/>
+                                        <t t-call="ahps_kyc.portal_kyc_contact_block"/>
+                                    </t>
+                                </div>
+
+                                <!-- 5. Bank details (suppliers) -->
+                                <div class="ahps-supplier-only">
+                                    <h5 class="border-bottom pb-1 mt-4">5. Payment information</h5>
+                                    <div class="row g-2">
+                                        <div class="col-md-4"><label class="form-label">Bank name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="bank_name" t-att-value="values.get('bank_name')"/></div>
+                                        <div class="col-md-4"><label class="form-label">Account No. <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="bank_account" t-att-value="values.get('bank_account')"/></div>
+                                        <div class="col-md-4"><label class="form-label">Currency</label>
+                                            <select class="form-select" name="bank_currency_id">
+                                                <option value="">Currency...</option>
+                                                <t t-foreach="currencies" t-as="cur">
+                                                    <option t-att-value="cur.id" t-att-selected="str(values.get('bank_currency_id')) == str(cur.id)" t-out="cur.name"/>
+                                                </t>
+                                            </select></div>
+                                        <div class="col-md-4"><label class="form-label">SWIFT / BIC</label>
+                                            <input type="text" class="form-control" name="bank_swift" t-att-value="values.get('bank_swift')"/></div>
+                                        <div class="col-md-4"><label class="form-label">IBAN</label>
+                                            <input type="text" class="form-control" name="bank_iban" t-att-value="values.get('bank_iban')"/></div>
+                                        <div class="col-md-4"><label class="form-label">Bank address</label>
+                                            <input type="text" class="form-control" name="bank_address" t-att-value="values.get('bank_address')"/></div>
+                                    </div>
+                                </div>
+
+                                <!-- 6. Documents -->
+                                <h5 class="border-bottom pb-1 mt-4"><span class="ahps-doc-section-no">6</span>. Documents</h5>
+                                <p class="small text-muted mb-2">PDF, JPG or PNG, max. 10 MB each.</p>
+                                <div class="row g-2">
+                                    <t t-foreach="doc_types" t-as="dt">
+                                        <t t-set="already" t-value="existing_docs.filtered(lambda d: d.document_type_id == dt)"/>
+                                        <div class="col-md-6 ahps-doc" t-att-data-applies="dt.applies_to">
+                                            <label class="form-label mb-1"><t t-out="dt.name"/>
+                                                <span t-if="dt.required" class="text-danger">*</span>
+                                                <small t-if="already" class="text-success ms-1">(already received - upload again to replace)</small>
+                                            </label>
+                                            <input type="file" class="form-control" t-attf-name="doc_#{dt.id}" accept=".pdf,.jpg,.jpeg,.png"/>
+                                        </div>
+                                    </t>
+                                </div>
+
+                                <!-- 7. Declaration -->
+                                <h5 class="border-bottom pb-1 mt-4"><span class="ahps-decl-section-no">7</span>. Declaration</h5>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="declaration" id="declaration" required="required"
+                                           t-att-checked="values.get('declaration') and 'checked'"/>
+                                    <label class="form-check-label" for="declaration">
+                                        I confirm that the information provided is true, valid and correct on the date of submission,
+                                        and I will inform <t t-out="company.name"/> of any change.
+                                    </label>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6"><input type="text" class="form-control" name="declaration_name" placeholder="Your full name *" required="required" t-att-value="values.get('declaration_name')"/></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" name="declaration_function" placeholder="Your position *" required="required" t-att-value="values.get('declaration_function')"/></div>
+                                </div>
+
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary btn-lg">Submit registration</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+(function () {
+    var form = document.getElementById('ahps_kyc_form');
+    if (!form) { return; }
+    function show(el, visible) { el.style.display = visible ? '' : 'none'; }
+    function refresh() {
+        var checked = form.querySelector('input[name="registration_type"]:checked');
+        var isSupplier = checked ? checked.value === 'supplier' : false;
+        form.querySelectorAll('.ahps-customer-only').forEach(function (el) { show(el, !isSupplier); });
+        form.querySelectorAll('.ahps-supplier-only').forEach(function (el) { show(el, isSupplier); });
+        form.querySelector('.ahps-doc-section-no').textContent = isSupplier ? '6' : '5';
+        form.querySelector('.ahps-decl-section-no').textContent = isSupplier ? '7' : '6';
+        form.querySelectorAll('.ahps-doc').forEach(function (el) {
+            var applies = el.dataset.applies;
+            show(el, applies === 'both' || applies === (isSupplier ? 'supplier' : 'customer'));
+        });
+        form.querySelectorAll('.ahps-kyc-contact').forEach(function (el) {
+            var required = el.dataset[isSupplier ? 'requiredSupplier' : 'requiredCustomer'] === '1';
+            el.querySelector('.ahps-req-mark').style.display = required ? '' : 'none';
+            var same = el.querySelector('.ahps-same-contact');
+            show(el.querySelector('.ahps-contact-fields'), same ? !same.checked : true);
+        });
+        form.querySelectorAll('.ahps-same-address').forEach(function (cb) {
+            show(cb.closest('.col-12').querySelector('.ahps-address-fields'), !cb.checked);
+        });
+        var endUser = form.querySelector('#cat_end_user');
+        show(form.querySelector('.ahps-sector'), endUser ? endUser.checked : false);
+    }
+    form.addEventListener('change', refresh);
+    refresh();
+})();
+            </script>
+        </t>
+    </template>
+
+    <template id="portal_kyc_done" name="aHPS KYC Submitted">
+        <t t-call="portal.frontend_layout">
+            <div id="wrap" class="bg-light py-5">
+                <div class="container text-center" style="max-width: 640px;">
+                    <div class="card shadow-sm"><div class="card-body p-5">
+                        <i class="fa fa-check-circle fa-4x text-success mb-3"/>
+                        <t t-if="partner and partner.ahps_kyc_state == 'approved'">
+                            <h3>Registration approved</h3>
+                            <p class="text-muted">Your registration with <t t-out="company.name"/> is approved.
+                                <t t-if="partner.ahps_customer_number">Your customer ID is <strong t-out="partner.ahps_customer_number"/>.</t></p>
+                        </t>
+                        <t t-else="">
+                            <h3>Thank you<t t-if="partner">, <t t-out="partner.name"/></t>!</h3>
+                            <p class="text-muted">Your registration has been received and is being reviewed by
+                                <t t-out="company.name"/>. We will contact you once it is approved.</p>
+                        </t>
+                        <p class="small text-muted mb-0">Questions? <a t-att-href="'mailto:%s' % (company.email or '')" t-out="company.email"/></p>
+                    </div></div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

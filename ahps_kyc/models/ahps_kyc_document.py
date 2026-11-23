@@ -9,10 +9,26 @@ class AhpsKycDocumentType(models.Model):
     name = fields.Char(required=True, translate=True)
     sequence = fields.Integer(default=10)
     required = fields.Boolean(
-        string="Required for KYC",
+        string="Required",
         help="A document of this type must be attached before the KYC can be submitted.",
     )
+    applies_to = fields.Selection(
+        [("customer", "Customers"), ("supplier", "Suppliers"), ("both", "Customers and Suppliers")],
+        string="Asked From", required=True, default="both",
+        help="Which registrations ask for this document on the online KYC form.",
+    )
+    portal_visible = fields.Boolean(string="On Online Form", default=True,
+                                    help="Ask for this document on the online KYC form.")
+    description = fields.Char(help="Short hint shown on the online form.")
     active = fields.Boolean(default=True)
+
+    @api.model
+    def _ahps_types_for(self, registration_type):
+        return self.search([("applies_to", "in", (registration_type or "customer", "both"))])
+
+    @api.model
+    def _ahps_required_types(self, registration_type):
+        return self._ahps_types_for(registration_type).filtered("required")
 
 
 class AhpsKycDocument(models.Model):

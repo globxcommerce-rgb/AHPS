@@ -49,7 +49,10 @@
             <list string="KYC Document Types" editable="bottom">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
+                <field name="applies_to"/>
                 <field name="required"/>
+                <field name="portal_visible"/>
+                <field name="description" optional="hide"/>
             </list>
         </field>
     </record>

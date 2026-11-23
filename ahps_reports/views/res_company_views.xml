@@ -10,6 +10,7 @@
                     <group>
                         <group string="Company Details">
                             <field name="ahps_registration_no"/>
+                            <field name="ahps_base_pricelist_id" options="{'no_create': True}"/>
                             <field name="ahps_doc_signatory"/>
                             <field name="ahps_handling_charges"/>
                             <field name="ahps_bank_account_ids" widget="many2many_tags"
@@ -30,6 +31,10 @@
                         <group string="Logos">
                             <field name="ahps_show_footer_logos"/>
                             <field name="ahps_show_accreditation"/>
+                            <div colspan="2">
+                                <button name="%(ahps_reports.action_ahps_document_logo)d" type="action"
+                                        string="Manage document logos" icon="fa-picture-o" class="btn-link ps-0"/>
+                            </div>
                         </group>
                     </group>
                 </page>

@@ -4,6 +4,11 @@ from odoo import fields, models
 class ResCompany(models.Model):
     _inherit = "res.company"
 
+    ahps_base_pricelist_id = fields.Many2one(
+        "product.pricelist", string="Base Price List",
+        help="Price list holding the standard (EUR) prices. When a quotation is switched to another currency, "
+             "prices are converted from it at the day's exchange rate.",
+    )
     ahps_registration_no = fields.Char(string="Certificate of Registration", help="Printed as 'Cert. of Registration' on aHPS documents.")
     ahps_doc_signatory = fields.Char(string="Document Signatory", default="J. Mbugua",
                                      help="Name printed on the signature line of quotations, PFIs and RFQs.")
@@ -24,6 +29,12 @@ class ResCompany(models.Model):
     ahps_show_footer_logos = fields.Boolean(string="Print Partner Logos", default=True,
                                             help="Print the Pentair / Yakima Chief / Doemens / ATEC logos at the bottom of quotations, PFIs and invoices.")
     ahps_show_accreditation = fields.Boolean(string="Print ISO/IEC 17025 Badge on Invoices", default=True)
+
+    def _ahps_document_logos(self, usage="footer"):
+        self.ensure_one()
+        return self.env["ahps.document.logo"].sudo().search(
+            [("usage", "=", usage), ("company_id", "in", (False, self.id))]
+        )
 
     def _ahps_bank_accounts(self):
         self.ensure_one()

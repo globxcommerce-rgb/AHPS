@@ -11,11 +11,13 @@
         </div>
         <div class="footer">
             <div style="font-family: Calibri, Carlito, Arial, sans-serif; font-size: 10px; color: #000;">
-                <t t-if="ahps_footer_logos and company.ahps_show_footer_logos">
-                    <div style="border-top: 2px solid #000; margin: 0 60px; padding-top: 4px; text-align: center;">
-                        <img t-att-src="'/ahps_reports/static/img/footer_logos.png'" style="height: 58px;" alt="Partners"/>
-                    </div>
-                </t>
+                <t t-set="footer_logos" t-value="company._ahps_document_logos('footer') if ahps_footer_logos and company.ahps_show_footer_logos else False"/>
+                <div t-if="footer_logos" style="border-top: 2px solid #000; margin: 0 60px; padding-top: 6px; text-align: center;">
+                    <t t-foreach="footer_logos" t-as="flogo">
+                        <img t-att-src="image_data_uri(flogo.image)" t-att-alt="flogo.name"
+                             style="max-height: 44px; max-width: 150px; margin: 0 14px; vertical-align: middle;"/>
+                    </t>
+                </div>
                 <div style="text-align: right; padding-top: 2px;">
                     Page <span class="page"/> of <span class="topage"/>
                 </div>
@@ -29,7 +31,7 @@
             .ahps-doc table { border-collapse: collapse; border: 0 none; margin: 0; }
             .ahps-doc table, .ahps-doc thead, .ahps-doc tbody, .ahps-doc tr, .ahps-doc td, .ahps-doc th { border-style: none; border-width: 0; }
             .ahps-doc .ahps-top { width: 100%; margin-bottom: 4px; }
-            .ahps-doc .ahps-logo img { max-height: 72px; max-width: 170px; margin-top: 10px; }
+            .ahps-doc .ahps-logo img { max-height: 64px; max-width: 170px; margin-top: 0; }
             .ahps-doc .ahps-title { text-align: center; font-size: 22px; font-weight: bold; }
             .ahps-doc .ahps-title .ahps-number { font-size: 13px; padding-top: 6px; }
             .ahps-doc .ahps-cbox { border: 1px dashed #555; padding: 5px 7px; font-size: 10.5px; line-height: 1.35; }
@@ -75,7 +77,7 @@
                                 <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" alt="Logo"/>
                                 <img t-else="" src="/ahps_reports/static/img/ahps_logo.png" alt="Logo"/>
                             </td>
-                            <td class="ahps-title" t-att-style="'padding-top: %spx;' % (ahps_title_top or 30)">
+                            <td class="ahps-title" t-att-style="'padding-top: %spx;' % (ahps_title_top or 8)">
                                 <div t-out="ahps_title"/>
                                 <div t-if="ahps_number" class="ahps-number" t-att-style="ahps_number_style or ''">(<t t-out="ahps_number"/>)</div>
                             </td>

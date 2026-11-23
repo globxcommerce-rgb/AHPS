@@ -5,6 +5,13 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_term_id']" position="before">
+                <field name="ahps_currency_id" options="{'no_create': True, 'no_open': True}"
+                       readonly="state not in ('draft', 'sent')"/>
+                <field name="ahps_fx_rate" invisible="not ahps_fx_rate" readonly="1" force_save="1"/>
+                <field name="ahps_fx_rate_date" invisible="1" force_save="1"/>
+                <field name="ahps_fx_base_currency_id" invisible="1" force_save="1"/>
+            </xpath>
             <xpath expr="//field[@name='payment_term_id']" position="after">
                 <field name="ahps_quote_category"/>
             </xpath>

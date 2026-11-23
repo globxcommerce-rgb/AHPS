@@ -7,7 +7,8 @@
             <form string="Reject KYC">
                 <field name="partner_ids" invisible="1"/>
                 <group>
-                    <field name="reason" placeholder="What is missing or wrong? The officer will see this on the customer."/>
+                    <field name="reason" placeholder="What is missing or wrong? e.g. The TIN certificate is unreadable, please upload a clear copy."/>
+                    <field name="notify_customer"/>
                 </group>
                 <footer>
                     <button name="action_reject" type="object" string="Reject KYC" class="btn-primary"/>

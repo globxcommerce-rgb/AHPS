@@ -1,6 +1,6 @@
 {
     "name": "aHPS Document Templates",
-    "version": "20.0.1.0.0",
+    "version": "20.0.1.1.0",
     "summary": "aHPS layouts for Quotation, Pro Forma Invoice, Invoice, RFQ and Purchase Order",
     "description": """
 Prints the aHPS business documents in the client's own formats:
@@ -21,12 +21,15 @@ weight, HS code, country of origin, charge type, end user on RFQs) and an
     "license": "LGPL-3",
     "depends": ["ahps_kyc", "sale_management", "purchase", "account"],
     "data": [
+        "security/ir.access.csv",
         "data/ir_sequence_data.xml",
+        "data/ahps_document_logo_data.xml",
         "report/ahps_paperformat.xml",
         "report/ahps_report_common.xml",
         "report/ahps_sale_templates.xml",
         "report/ahps_invoice_templates.xml",
         "report/ahps_purchase_templates.xml",
+        "views/ahps_document_logo_views.xml",
         "views/res_company_views.xml",
         "views/product_views.xml",
         "views/sale_order_views.xml",

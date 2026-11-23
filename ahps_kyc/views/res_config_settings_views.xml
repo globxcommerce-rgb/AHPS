@@ -6,15 +6,17 @@
         <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//app[@name='sale_management']" position="inside">
-                <block title="Customer KYC (aHPS)" name="ahps_kyc_setting_container">
+                <block title="KYC (aHPS)" name="ahps_kyc_setting_container">
                     <setting id="ahps_kyc_required" string="Require approved KYC"
                              help="Quotations cannot be sent or confirmed, and customer invoices cannot be posted, until the customer's KYC is approved.">
                         <field name="ahps_kyc_required"/>
                     </setting>
-                    <setting id="ahps_kyc_form" string="Blank KYC form"
-                             help="Attached automatically to the KYC request email sent to new customers.">
-                        <field name="ahps_kyc_form" filename="ahps_kyc_form_name"/>
-                        <field name="ahps_kyc_form_name" invisible="1"/>
+                    <setting id="ahps_kyc_public_registration" string="Public registration page"
+                             help="Let new customers and suppliers register themselves online, without an invitation.">
+                        <field name="ahps_kyc_public_registration"/>
+                        <div class="mt-2" invisible="not ahps_kyc_public_registration">
+                            <field name="ahps_kyc_public_url" widget="CopyClipboardChar" readonly="1"/>
+                        </div>
                     </setting>
                 </block>
             </xpath>

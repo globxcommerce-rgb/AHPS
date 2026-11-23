@@ -8,10 +8,13 @@
             <!-- KYC workflow header (companies only) -->
             <xpath expr="//form/div[@name='warning_tax']" position="before">
                 <header invisible="parent_id">
-                    <button name="action_ahps_kyc_send_request" type="object" string="Send KYC Form"
+                    <button name="action_ahps_kyc_send_request" type="object" string="Send KYC Link"
                             class="btn-primary" invisible="ahps_kyc_state not in ('not_started', 'rejected')"
                             groups="ahps_kyc.group_ahps_kyc_user"/>
-                    <button name="action_ahps_kyc_send_request" type="object" string="Resend KYC Form"
+                    <button name="action_ahps_kyc_mark_requested" type="object" string="Get KYC Link"
+                            invisible="ahps_kyc_state != 'not_started'" groups="ahps_kyc.group_ahps_kyc_user"
+                            help="Create the online form link without sending the email (to share it yourself)."/>
+                    <button name="action_ahps_kyc_send_request" type="object" string="Resend KYC Link"
                             invisible="ahps_kyc_state != 'requested'" groups="ahps_kyc.group_ahps_kyc_user"/>
                     <button name="action_ahps_kyc_submit" type="object" string="Submit KYC for Review"
                             class="btn-primary" invisible="ahps_kyc_state not in ('not_started', 'requested', 'rejected')"
@@ -70,16 +73,21 @@
                             <field name="ahps_postal_address"/>
                             <field name="ahps_company_group_id" />
                         </group>
-                        <group string="Categorisation">
-                            <field name="ahps_customer_type" widget="radio" options="{'horizontal': true}"/>
-                            <field name="ahps_customer_subcategory"
-                                   invisible="ahps_customer_type != 'end_user'"
-                                   required="ahps_customer_type == 'end_user' and ahps_kyc_state == 'submitted'"/>
+                        <group string="Registration">
+                            <field name="ahps_registration_type" widget="radio" options="{'horizontal': true}"/>
+                            <field name="category_id" string="Customer Category" widget="many2many_tags"
+                                   options="{'color_field': 'color', 'no_create_edit': True}"
+                                   invisible="ahps_registration_type == 'supplier'"
+                                   placeholder="e.g. End User / Breweries, or Reseller"/>
+                            <field name="ahps_company_group_name" invisible="not ahps_company_group_name"/>
+                            <field name="ahps_kyc_url" widget="CopyClipboardChar" readonly="1" invisible="not ahps_kyc_url"
+                                   string="Online KYC Form"/>
                         </group>
                     </group>
                     <group>
                         <group string="KYC Contacts">
                             <field name="ahps_main_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
+                            <field name="ahps_authorized_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
                             <field name="ahps_alternative_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
                             <field name="ahps_procurement_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
                             <field name="ahps_finance_contact_id" context="{'default_parent_id': id, 'default_type': 'contact'}"/>
@@ -89,6 +97,10 @@
                             <field name="ahps_kyc_submitted_date"/>
                             <field name="ahps_kyc_approved_date"/>
                             <field name="ahps_kyc_approved_by_id"/>
+                            <field name="ahps_kyc_submitted_online" invisible="not ahps_kyc_submitted_online"/>
+                            <field name="ahps_kyc_declared_by" invisible="not ahps_kyc_declared_by"/>
+                            <field name="ahps_kyc_declared_position" invisible="not ahps_kyc_declared_by"/>
+                            <field name="ahps_kyc_declaration_date" invisible="not ahps_kyc_declared_by"/>
                         </group>
                     </group>
                     <separator string="KYC Documents"/>
@@ -123,8 +135,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='display_name']" position="after">
                 <field name="ahps_customer_number" optional="show"/>
-                <field name="ahps_customer_type" optional="hide"/>
-                <field name="ahps_customer_subcategory" optional="hide"/>
+                <field name="ahps_registration_type" optional="hide"/>
                 <field name="ahps_kyc_state" optional="show" widget="badge"
                        decoration-success="ahps_kyc_state == 'approved'"
                        decoration-warning="ahps_kyc_state in ('requested', 'submitted')"
@@ -147,17 +158,16 @@
                 <filter name="ahps_kyc_pending" string="KYC Pending" domain="[('ahps_kyc_state', 'in', ('not_started', 'requested', 'rejected')), ('parent_id', '=', False)]"/>
                 <filter name="ahps_kyc_approved" string="KYC Approved" domain="[('ahps_kyc_state', '=', 'approved')]"/>
                 <separator/>
-                <filter name="ahps_end_users" string="End Users" domain="[('ahps_customer_type', '=', 'end_user')]"/>
-                <filter name="ahps_resellers" string="Resellers" domain="[('ahps_customer_type', '=', 'reseller')]"/>
+                <filter name="ahps_suppliers_registration" string="Supplier Registrations" domain="[('ahps_registration_type', '=', 'supplier')]"/>
+                <filter name="ahps_submitted_online" string="Submitted Online" domain="[('ahps_kyc_submitted_online', '=', True)]"/>
                 <filter name="group_ahps_kyc_state" string="KYC Status" context="{'group_by': 'ahps_kyc_state'}"/>
-                <filter name="group_ahps_customer_type" string="Customer Category" context="{'group_by': 'ahps_customer_type'}"/>
-                <filter name="group_ahps_customer_subcategory" string="End-User Subcategory" context="{'group_by': 'ahps_customer_subcategory'}"/>
+                <filter name="group_ahps_registration_type" string="Registers As" context="{'group_by': 'ahps_registration_type'}"/>
             </xpath>
         </field>
     </record>
 
     <record id="action_ahps_kyc_customers" model="ir.actions.act_window">
-        <field name="name">Customer KYC</field>
+        <field name="name">KYC Registrations</field>
         <field name="res_model">res.partner</field>
         <field name="view_mode">list,kanban,form</field>
         <field name="domain">[('parent_id', '=', False)]</field>

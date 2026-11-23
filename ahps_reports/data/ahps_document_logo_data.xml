@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="logo_pentair" model="ahps.document.logo">
+        <field name="name">Pentair</field>
+        <field name="sequence">1</field>
+        <field name="image" type="bytes" file="ahps_reports/static/img/logo_pentair.png"/>
+    </record>
+    <record id="logo_yakima_chief" model="ahps.document.logo">
+        <field name="name">Yakima Chief Hops</field>
+        <field name="sequence">2</field>
+        <field name="image" type="bytes" file="ahps_reports/static/img/logo_yakima_chief.png"/>
+    </record>
+    <record id="logo_doemens" model="ahps.document.logo">
+        <field name="name">Doemens</field>
+        <field name="sequence">3</field>
+        <field name="image" type="bytes" file="ahps_reports/static/img/logo_doemens.png"/>
+    </record>
+    <record id="logo_atec" model="ahps.document.logo">
+        <field name="name">ATEC</field>
+        <field name="sequence">4</field>
+        <field name="image" type="bytes" file="ahps_reports/static/img/logo_atec.png"/>
+    </record>
+    <record id="logo_iso_17025" model="ahps.document.logo">
+        <field name="name">ISO/IEC 17025</field>
+        <field name="usage">accreditation</field>
+        <field name="image" type="bytes" file="ahps_reports/static/img/iso_17025.png"/>
+    </record>
+</odoo>

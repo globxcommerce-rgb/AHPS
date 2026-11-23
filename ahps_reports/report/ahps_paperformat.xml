@@ -4,7 +4,7 @@
         <field name="name">aHPS A4</field>
         <field name="format">A4</field>
         <field name="orientation">Portrait</field>
-        <field name="margin_top">8</field>
+        <field name="margin_top">6</field>
         <field name="margin_bottom">26</field>
         <field name="margin_left">9</field>
         <field name="margin_right">9</field>

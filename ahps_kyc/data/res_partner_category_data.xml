@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- aHPS customer categories (contact tags). Sectors are children of End User. -->
+    <record id="partner_tag_end_user" model="res.partner.category">
+        <field name="name">End User</field>
+    </record>
+    <record id="partner_tag_reseller" model="res.partner.category">
+        <field name="name">Reseller</field>
+    </record>
+    <record id="partner_tag_brewery" model="res.partner.category">
+        <field name="name">Breweries</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+    <record id="partner_tag_soft_drinks" model="res.partner.category">
+        <field name="name">Soft Drinks</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+    <record id="partner_tag_water" model="res.partner.category">
+        <field name="name">Water</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+    <record id="partner_tag_institutes" model="res.partner.category">
+        <field name="name">Institutes</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+    <record id="partner_tag_wine_spirits" model="res.partner.category">
+        <field name="name">Wine &amp; Spirits</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+    <record id="partner_tag_dairy" model="res.partner.category">
+        <field name="name">Dairy</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+    <record id="partner_tag_rest" model="res.partner.category">
+        <field name="name">Rest</field>
+        <field name="parent_id" ref="partner_tag_end_user"/>
+    </record>
+</odoo>
