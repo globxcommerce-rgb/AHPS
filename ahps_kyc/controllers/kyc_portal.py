@@ -230,7 +230,8 @@ class AhpsKycPortal(http.Controller):
             _logger.info("KYC form for partner %s rejected: %s", partner and partner.id, e)
             return self._render_form(partner=None if is_new else partner, values=post,
                                      errors=[str(e.args[0]) if e.args else str(e)])
-        return self._render("ahps_kyc.portal_kyc_done", partner=partner, just_submitted=True)
+        # redirect after a successful submit, so refreshing the page or going back cannot post the form again
+        return request.redirect(f"/kyc/{partner.id}/{partner.ahps_kyc_token}", code=303)
 
     def _apply(self, partner, post, reg_type, docs):
         env = request.env
