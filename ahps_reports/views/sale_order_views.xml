@@ -9,7 +9,8 @@
                 <field name="ahps_currency_id" options="{'no_create': True, 'no_open': True}"
                        readonly="state not in ('draft', 'sent')"/>
                 <field name="ahps_fx_rate" invisible="not ahps_fx_rate or ahps_currency_id == ahps_fx_base_currency_id"
-                       readonly="1" force_save="1"/>
+                       readonly="state not in ('draft', 'sent')" force_save="1"/>
+                <field name="ahps_fx_applied_rate" invisible="1" force_save="1"/>
                 <field name="ahps_fx_rate_date" invisible="1" force_save="1"/>
                 <field name="ahps_fx_base_currency_id" invisible="1" force_save="1"/>
             </xpath>
