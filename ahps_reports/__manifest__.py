@@ -1,6 +1,6 @@
 {
     "name": "aHPS Document Templates",
-    "version": "20.0.1.1.2",
+    "version": "20.0.1.1.3",
     "summary": "aHPS layouts for Quotation, Pro Forma Invoice, Invoice, RFQ and Purchase Order",
     "description": """
 Prints the aHPS business documents in the client's own formats:

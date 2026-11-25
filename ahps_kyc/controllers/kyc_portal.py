@@ -1,7 +1,7 @@
 import base64
 import logging
 
-from odoo import fields, http
+from odoo import SUPERUSER_ID, fields, http
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
 from odoo.tools import consteq, email_normalize
@@ -72,7 +72,7 @@ class AhpsKycPortal(http.Controller):
         values.setdefault("company", company)
         return request.render(template, values)
 
-    def _render_form(self, partner, values, errors):
+    def _render_form(self, partner, values, errors, kept=None):
         env = request.env
         end_user = env.ref("ahps_kyc.partner_tag_end_user", raise_if_not_found=False)
         reseller = env.ref("ahps_kyc.partner_tag_reseller", raise_if_not_found=False)
@@ -92,6 +92,7 @@ class AhpsKycPortal(http.Controller):
             countries=countries,
             currencies=currencies,
             contact_roles=CONTACT_ROLES,
+            kept=kept or {},
             existing_docs=partner.ahps_kyc_document_ids if partner else env["ahps.kyc.document"],
             action_url=f"/kyc/{partner.id}/{partner.ahps_kyc_token}" if partner else "/kyc/register",
         )
@@ -194,8 +195,14 @@ class AhpsKycPortal(http.Controller):
         files = request.httprequest.files
         docs, errors = [], []
         existing_types = partner.ahps_kyc_document_ids.document_type_id if partner else env["ahps.kyc.document.type"]
+        post = request.params
         for doc_type in env["ahps.kyc.document.type"].sudo()._ahps_types_for(reg_type).filtered("portal_visible"):
             upload = files.get(f"doc_{doc_type.id}")
+            kept = self._kept_upload(post.get(f"keep_{doc_type.id}"))
+            if kept and not (upload and upload.filename):
+                docs.append({"document_type_id": doc_type.id, "attachment": base64.b64encode(kept.raw).decode(),
+                             "attachment_name": kept.name, "kept_attachment": kept.id})
+                continue
             if upload and upload.filename:
                 name = upload.filename
                 content = upload.read()
@@ -212,12 +219,45 @@ class AhpsKycPortal(http.Controller):
                 errors.append(f"{doc_type.name} is required.")
         return docs, errors
 
+    # uploads kept between attempts, so the company does not have to choose its files again
+    KEEP_MODEL = "ahps.kyc.upload"
+
+    def _keep_uploads(self, docs):
+        """Store valid uploads of a failed attempt; return {document type id: {"ref", "name"}}."""
+        Attachment = request.env["ir.attachment"].sudo()
+        kept = {}
+        for doc in docs:
+            attachment = Attachment.browse(doc.get("kept_attachment")).exists()
+            if not attachment:
+                attachment = Attachment.create({
+                    "name": doc["attachment_name"],
+                    "raw": base64.b64decode(doc["attachment"]),
+                    "res_model": self.KEEP_MODEL,
+                    "res_id": 0,
+                })
+                attachment.generate_access_token()
+            kept[doc["document_type_id"]] = {"ref": f"{attachment.id}:{attachment.access_token}",
+                                              "name": attachment.name}
+        return kept
+
+    def _kept_upload(self, ref):
+        if not ref or ":" not in ref:
+            return None
+        att_id, token = ref.split(":", 1)
+        if not att_id.isdigit():
+            return None
+        attachment = request.env["ir.attachment"].sudo().browse(int(att_id)).exists()
+        if (not attachment or attachment.res_model != self.KEEP_MODEL or not attachment.access_token
+                or not consteq(attachment.access_token, token)):
+            return None
+        return attachment
+
     def _process(self, partner, post):
         errors, reg_type = self._validate(post)
         docs, doc_errors = self._uploaded_documents(reg_type, partner)
         errors += doc_errors
         if errors:
-            return self._render_form(partner=partner, values=post, errors=errors)
+            return self._render_form(partner=partner, values=post, errors=errors, kept=self._keep_uploads(docs))
         Partner = request.env["res.partner"].sudo()
         is_new = partner is None
         try:
@@ -229,7 +269,7 @@ class AhpsKycPortal(http.Controller):
         except (UserError, ValidationError) as e:
             _logger.info("KYC form for partner %s rejected: %s", partner and partner.id, e)
             return self._render_form(partner=None if is_new else partner, values=post,
-                                     errors=[str(e.args[0]) if e.args else str(e)])
+                                     errors=[str(e.args[0]) if e.args else str(e)], kept=self._keep_uploads(docs))
         # redirect after a successful submit, so refreshing the page or going back cannot post the form again
         return request.redirect(f"/kyc/{partner.id}/{partner.ahps_kyc_token}", code=303)
 
@@ -335,11 +375,16 @@ class AhpsKycPortal(http.Controller):
                 Bank.create(dict(bank_vals, partner_id=partner.id, account_number=get("bank_account")))
 
         # documents
+        attachments = env["ir.attachment"]
         if docs:
             replaced = partner.ahps_kyc_document_ids.filtered(
                 lambda d: d.document_type_id.id in {doc["document_type_id"] for doc in docs})
             replaced.sudo().unlink()
-            env["ahps.kyc.document"].sudo().create([dict(d, partner_id=partner.id) for d in docs])
+            new_docs = env["ahps.kyc.document"].sudo().with_context(ahps_kyc_no_post=True).create(
+                [{k: v for k, v in dict(d, partner_id=partner.id).items() if k != "kept_attachment"} for d in docs])
+            attachments = new_docs.partner_attachment_id
+            kept = env["ir.attachment"].sudo().browse([d["kept_attachment"] for d in docs if d.get("kept_attachment")])
+            kept.exists().unlink()
 
         partner.write({
             "ahps_kyc_submitted_online": True,
@@ -347,5 +392,10 @@ class AhpsKycPortal(http.Controller):
             "ahps_kyc_declared_position": get("declaration_function"),
             "ahps_kyc_declaration_date": fields.Datetime.now(),
         })
-        partner.message_post(body=f"KYC form submitted online by {get('declaration_name')} ({get('declaration_function')}).")
+        # posted as the system (public users cannot attach files to messages), on behalf of the contact person
+        partner.with_user(SUPERUSER_ID).message_post(
+            body=f"KYC form submitted online by {get('declaration_name')} ({get('declaration_function')}).",
+            attachment_ids=attachments.ids,
+            author_id=(partner.ahps_main_contact_id or partner).id,
+        )
         partner._ahps_kyc_mark_submitted()

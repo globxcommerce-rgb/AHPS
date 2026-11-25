@@ -1,3 +1,5 @@
+import base64
+
 from odoo import api, fields, models
 
 
@@ -48,6 +50,61 @@ class AhpsKycDocument(models.Model):
     expiry_date = fields.Date()
     is_expired = fields.Boolean(compute="_compute_is_expired")
     note = fields.Char()
+    partner_attachment_id = fields.Many2one(
+        "ir.attachment", string="File on Contact", readonly=True, copy=False, ondelete="set null",
+        help="Copy of the file attached to the company, so it can be viewed from the Files of the chatter.",
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        docs = super().create(vals_list)
+        docs._ahps_attach_to_partner()
+        return docs
+
+    def write(self, vals):
+        res = super().write(vals)
+        if {"attachment", "attachment_name", "partner_id", "document_type_id"} & set(vals):
+            self._ahps_attach_to_partner()
+        return res
+
+    def _ahps_file_content(self):
+        self.ensure_one()
+        value = self.with_context(bin_size=False).attachment
+        if not value:
+            return b""
+        content = getattr(value, "content", None)
+        if content is not None:
+            return content
+        return base64.b64decode(value) if isinstance(value, (str, bytes)) else b""
+
+    def _ahps_attach_to_partner(self, post=None):
+        """Attach each document's file to its company, where it shows in the Files of the chatter and
+        opens in the viewer. Earlier versions stay attached (history of what was submitted)."""
+        if post is None:
+            post = not self.env.context.get("ahps_kyc_no_post")
+        Attachment = self.env["ir.attachment"].sudo()
+        new_by_partner = {}
+        for doc in self.sudo():
+            content = doc._ahps_file_content()
+            if not content or not doc.partner_id:
+                continue
+            filename = doc.attachment_name or "document"
+            attachment = Attachment.create({
+                "name": f"{doc.document_type_id.name} - {filename}",
+                "raw": content,
+                "res_model": "res.partner",
+                "res_id": doc.partner_id.id,
+            })
+            super(AhpsKycDocument, doc).write({"partner_attachment_id": attachment.id})
+            new_by_partner.setdefault(doc.partner_id, Attachment)
+            new_by_partner[doc.partner_id] |= attachment
+        if post:
+            for partner, attachments in new_by_partner.items():
+                partner.message_post(
+                    body=self.env._("KYC documents added: %s", ", ".join(attachments.mapped("name"))),
+                    attachment_ids=attachments.ids,
+                )
+        return new_by_partner
 
     @api.depends("expiry_date")
     def _compute_is_expired(self):
