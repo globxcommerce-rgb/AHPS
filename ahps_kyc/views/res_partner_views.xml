@@ -67,6 +67,12 @@
                                    readonly="1" groups="!ahps_kyc.group_ahps_kyc_manager"/>
                             <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. 2026.021"
                                    groups="ahps_kyc.group_ahps_kyc_manager"/>
+                            <field name="ahps_supplier_number" placeholder="Assigned on approval of a supplier"
+                                   readonly="1" groups="!ahps_kyc.group_ahps_kyc_manager"
+                                   invisible="not ahps_supplier_number and ahps_registration_type != 'supplier'"/>
+                            <field name="ahps_supplier_number" placeholder="Assigned on approval of a supplier"
+                                   groups="ahps_kyc.group_ahps_kyc_manager"
+                                   invisible="not ahps_supplier_number and ahps_registration_type != 'supplier'"/>
                             <field name="ahps_registration_date"/>
                             <field name="vat" string="TIN"/>
                             <field name="ahps_company_registry"/>
@@ -135,6 +141,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='display_name']" position="after">
                 <field name="ahps_customer_number" optional="show"/>
+                <field name="ahps_supplier_number" optional="show"/>
                 <field name="ahps_registration_type" optional="hide"/>
                 <field name="ahps_kyc_state" optional="show" widget="badge"
                        decoration-success="ahps_kyc_state == 'approved'"
@@ -151,6 +158,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
                 <field name="ahps_customer_number"/>
+                <field name="ahps_supplier_number"/>
             </xpath>
             <xpath expr="//search" position="inside">
                 <separator/>

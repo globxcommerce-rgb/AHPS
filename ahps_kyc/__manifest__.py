@@ -1,6 +1,6 @@
 {
     "name": "aHPS KYC (Customers & Suppliers)",
-    "version": "20.0.1.1.1",
+    "version": "20.0.1.1.2",
     "summary": "KYC registration, review and approval of aHPS customers and suppliers",
     "description": """
 Customer and supplier KYC process for Advanced Helios Process Solutions Ltd (aHPS):

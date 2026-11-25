@@ -44,6 +44,11 @@ class ResPartner(models.Model):
         help="aHPS customer number: year of registration and running number, e.g. 2026.021. "
         "Assigned automatically when the KYC is approved.",
     )
+    ahps_supplier_number = fields.Char(
+        string="Supplier ID", copy=False, tracking=True, index=True,
+        help="aHPS supplier number: year of registration and running number, e.g. 2026.066. "
+        "Assigned automatically when the KYC of a supplier is approved.",
+    )
     ahps_registration_date = fields.Date(
         string="Customer Since", copy=False, tracking=True,
         help="Date the customer was registered with aHPS. Its year is used in the customer number.",
@@ -114,6 +119,10 @@ class ResPartner(models.Model):
     _ahps_customer_number_unique = models.Constraint(
         "UNIQUE(ahps_customer_number)",
         "This customer ID is already used by another customer.",
+    )
+    _ahps_supplier_number_unique = models.Constraint(
+        "UNIQUE(ahps_supplier_number)",
+        "This supplier ID is already used by another supplier.",
     )
 
     # ----------------------------------------------------------------------
@@ -188,13 +197,18 @@ class ResPartner(models.Model):
     # ----------------------------------------------------------------------
     # Constraints / onchanges
     # ----------------------------------------------------------------------
-    @api.constrains("ahps_customer_number")
+    @api.constrains("ahps_customer_number", "ahps_supplier_number")
     def _check_ahps_customer_number(self):
         for partner in self:
             if partner.ahps_customer_number and not CUSTOMER_NUMBER_RE.match(partner.ahps_customer_number):
                 raise ValidationError(self.env._(
                     "Customer ID %(number)s must follow the format YYYY.NNN (e.g. 2026.021).",
                     number=partner.ahps_customer_number,
+                ))
+            if partner.ahps_supplier_number and not CUSTOMER_NUMBER_RE.match(partner.ahps_supplier_number):
+                raise ValidationError(self.env._(
+                    "Supplier ID %(number)s must follow the format YYYY.NNN (e.g. 2026.066).",
+                    number=partner.ahps_supplier_number,
                 ))
 
     # ----------------------------------------------------------------------
@@ -314,16 +328,24 @@ class ResPartner(models.Model):
         """Next customer ID: registration year + running number.
 
         The running number continues after the highest number already used, so imported
-        customers (e.g. up to 2026.231) are followed by 232 without manual set-up.
+        customers (e.g. up to 2026.237) are followed by 238 without manual set-up.
         """
-        sequence = self.env["ir.sequence"].sudo().search([("code", "=", "ahps.customer.number")], limit=1)
+        return self._ahps_next_number("ahps_customer_number", "ahps.customer.number", registration_date)
+
+    def _ahps_next_supplier_number(self, registration_date):
+        """Next supplier ID, same logic as the customer ID with its own running number."""
+        return self._ahps_next_number("ahps_supplier_number", "ahps.supplier.number", registration_date)
+
+    def _ahps_next_number(self, field_name, sequence_code, registration_date):
+        sequence = self.env["ir.sequence"].sudo().search([("code", "=", sequence_code)], limit=1)
         if not sequence:
-            raise UserError(self.env._("The sequence 'ahps.customer.number' is missing."))
+            raise UserError(self.env._("The sequence '%s' is missing.", sequence_code))
         self.env.flush_all()
-        self.env.cr.execute("""
-            SELECT MAX(CAST(SPLIT_PART(ahps_customer_number, '.', 2) AS INTEGER))
+        # field_name is one of our two fixed column names, never user input
+        self.env.cr.execute(f"""
+            SELECT MAX(CAST(SPLIT_PART({field_name}, '.', 2) AS INTEGER))
               FROM res_partner
-             WHERE ahps_customer_number ~ '^[0-9]{4}\\.[0-9]+$'
+             WHERE {field_name} ~ '^[0-9]{{4}}\\.[0-9]+$'
         """)
         highest = self.env.cr.fetchone()[0] or 0
         if sequence.number_next_actual <= highest:
@@ -347,6 +369,8 @@ class ResPartner(models.Model):
             if not partner.ahps_registration_date:
                 vals["ahps_registration_date"] = reg_date
             if partner.ahps_registration_type == "supplier":
+                if not partner.ahps_supplier_number:
+                    vals["ahps_supplier_number"] = partner._ahps_next_supplier_number(reg_date)
                 if not partner.supplier_rank:
                     vals["supplier_rank"] = 1
             else:
