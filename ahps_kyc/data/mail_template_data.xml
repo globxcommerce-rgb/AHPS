@@ -3,7 +3,7 @@
     <record id="mail_template_ahps_kyc_request" model="mail.template">
         <field name="name">aHPS: KYC Request</field>
         <field name="model_id" ref="base.model_res_partner"/>
-        <field name="subject">{{ user.company_id.name }} - Customer Registration (KYC)</field>
+        <field name="subject">{{ user.company_id.name }} - {{ 'Supplier' if object.ahps_registration_type == 'supplier' else 'Customer' }} Registration (KYC)</field>
         <field name="email_from">{{ (user.email_formatted or user.company_id.email_formatted) }}</field>
         <field name="partner_to">{{ object.id }}</field>
         <field name="description">Sent to a new customer or supplier with the link to the online KYC form.</field>
@@ -11,16 +11,26 @@
 <div style="margin: 0px; padding: 0px;">
     <p>Dear <t t-out="object.ahps_main_contact_id.name or object.name or ''">Customer</t>,</p>
     <p>Thank you for your interest in working with <t t-out="user.company_id.name or ''">aHPS</t>.</p>
-    <p>To register you, please complete our online Know Your Customer (KYC) form. It takes about
-        10 minutes: company details, your contact persons, invoice and delivery addresses, and a copy of
-        your certificate of incorporation and tax registration.</p>
+    <t t-if="object.ahps_registration_type == 'supplier'">
+        <p>To register you as a supplier, please complete our online registration (KYC) form. It takes about
+            10 minutes: company details, your contact and authorised persons, your bank details, and a copy of
+            your certificate of incorporation, tax registration and tax compliance certificates, business
+            license and a bank letter confirming your account.</p>
+    </t>
+    <t t-else="">
+        <p>To register you, please complete our online Know Your Customer (KYC) form. It takes about
+            10 minutes: company details, your contact persons, invoice and delivery addresses, and a copy of
+            your certificate of incorporation and tax registration.</p>
+    </t>
     <div style="margin: 16px 0px 16px 0px;">
         <a t-att-href="object.ahps_kyc_url"
            style="background-color: #2F5597; padding: 10px 18px; text-decoration: none; color: #fff; border-radius: 5px; font-size: 14px;">
             Complete the KYC form
         </a>
     </div>
-    <p>Once your registration is approved, we will share your customer ID, which appears on all our
+    <p t-if="object.ahps_registration_type == 'supplier'">Once your registration is approved, we will share
+        your supplier ID. Please quote it in your correspondence, invoices and delivery documents to us.</p>
+    <p t-else="">Once your registration is approved, we will share your customer ID, which appears on all our
         quotations and invoices.</p>
     <p>Kind regards,</p>
     <p t-out="user.name or ''">Joyce</p>
@@ -51,6 +61,39 @@
             Update my KYC form
         </a>
     </div>
+    <p>Kind regards,</p>
+    <p t-out="user.name or ''">Joyce</p>
+</div>
+        </field>
+        <field name="auto_delete" eval="False"/>
+    </record>
+
+    <record id="mail_template_ahps_kyc_approved" model="mail.template">
+        <field name="name">aHPS: KYC Approved</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="subject">{{ user.company_id.name }} - Your registration is approved</field>
+        <field name="email_from">{{ (user.email_formatted or user.company_id.email_formatted) }}</field>
+        <field name="partner_to">{{ object.id }}</field>
+        <field name="description">Sent to a customer or supplier when their KYC is approved, with their customer or supplier ID.</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p>Dear <t t-out="object.ahps_main_contact_id.name or object.name or ''">Customer</t>,</p>
+    <p>We are pleased to confirm that the registration of <t t-out="object.name or ''">your company</t>
+        with <t t-out="user.company_id.name or ''">aHPS</t> is approved.</p>
+    <t t-if="object.ahps_registration_type == 'supplier'">
+        <div style="margin: 12px 0px; padding: 10px 14px; background-color: #EAF3E6; border-left: 4px solid #4E9A2E;">
+            Your supplier ID: <strong t-out="object.ahps_supplier_number or ''">2026.066</strong>
+        </div>
+        <p>Please quote this ID in your correspondence, invoices and delivery documents to us.</p>
+    </t>
+    <t t-else="">
+        <div style="margin: 12px 0px; padding: 10px 14px; background-color: #EAF3E6; border-left: 4px solid #4E9A2E;">
+            Your customer ID: <strong t-out="object.ahps_customer_number or ''">2026.238</strong>
+        </div>
+        <p>This ID appears on all our quotations and invoices. Please quote it in your purchase orders and
+            payments to us.</p>
+    </t>
+    <p>If any of your company details change, please let us know so we can keep your registration up to date.</p>
     <p>Kind regards,</p>
     <p t-out="user.name or ''">Joyce</p>
 </div>

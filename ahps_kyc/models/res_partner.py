@@ -381,7 +381,16 @@ class ResPartner(models.Model):
             partner.write(vals)
             partner.activity_feedback(["mail.mail_activity_data_todo"],
                                       feedback=self.env._("KYC approved"))
+        self._ahps_kyc_send_approved_email()
         return True
+
+    def _ahps_kyc_send_approved_email(self):
+        """Tell the company its registration is approved, with its customer or supplier ID."""
+        template = self.env.ref("ahps_kyc.mail_template_ahps_kyc_approved", raise_if_not_found=False)
+        if not template:
+            return
+        for partner in self.filtered("email"):
+            partner.message_post_with_source(template, subtype_xmlid="mail.mt_comment")
 
     def action_ahps_kyc_reject(self):
         self._ahps_check_kyc_manager()

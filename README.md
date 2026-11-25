@@ -34,7 +34,7 @@ Upgrading from 1.0: the upgrade migrates the KYC document types and reloads the 
    - customers: type of company (End User + sector, or Reseller), procurement and finance contacts;
    - suppliers: authorized person, bank details (bank, account, currency, SWIFT, IBAN) and the extra documents (tax compliance, business license, bank letter).
 3. On submit, the answers fill the contact: KYC fields, customer category tags, child contacts (linked to their roles), invoice / delivery addresses, bank account and KYC documents. The KYC becomes *Submitted* and KYC Managers get a *Review KYC* activity.
-4. A KYC Manager approves (customer → customer ID; supplier → vendor) or rejects with a reason. On rejection the company is emailed the reason and the form link (can be unticked in the reject popup); the form opens pre-filled with the reason on top, so they correct and resubmit.
+4. A KYC Manager approves (customer → customer ID; supplier → vendor) or rejects with a reason. On approval the company is emailed its customer or supplier ID. On rejection the company is emailed the reason and the form link (can be unticked in the reject popup); the form opens pre-filled with the reason on top, so they correct and resubmit.
 5. Document types and which registration type needs them: Contacts › Configuration › KYC Document Types (*Applies To*, *Required*, *On Online Form*).
 
 ### Customer categories

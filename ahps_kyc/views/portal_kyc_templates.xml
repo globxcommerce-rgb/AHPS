@@ -288,7 +288,8 @@
                         <t t-if="partner and partner.ahps_kyc_state == 'approved'">
                             <h3>Registration approved</h3>
                             <p class="text-muted">Your registration with <t t-out="company.name"/> is approved.
-                                <t t-if="partner.ahps_customer_number">Your customer ID is <strong t-out="partner.ahps_customer_number"/>.</t></p>
+                                <t t-if="partner.ahps_customer_number">Your customer ID is <strong t-out="partner.ahps_customer_number"/>.</t>
+                                <t t-if="partner.ahps_supplier_number">Your supplier ID is <strong t-out="partner.ahps_supplier_number"/>.</t></p>
                         </t>
                         <t t-else="">
                             <h3>Thank you<t t-if="partner">, <t t-out="partner.name"/></t>!</h3>
