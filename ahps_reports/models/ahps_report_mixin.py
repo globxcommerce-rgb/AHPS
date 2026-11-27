@@ -97,6 +97,13 @@ class AhpsReportMixin(models.AbstractModel):
         """
         rows = []
         pos = 0
+        # notes after the last product (e.g. "Optional Documents") go to the bottom of the grid,
+        # under the empty rows, as on the aHPS paper templates
+        lines = list(lines)
+        bottom_notes = []
+        if min_rows:
+            while lines and lines[-1].display_type == "line_note":
+                bottom_notes.insert(0, lines.pop())
         for line in lines:
             display_type = line.display_type or "product"
             if display_type in ("line_section", "line_subsection"):
@@ -129,9 +136,16 @@ class AhpsReportMixin(models.AbstractModel):
             })
             for extra in desc[1:]:
                 rows.append({"desc": extra, "style": "extra"})
-        while len(rows) < min_rows:
+        bottom = []
+        for note in bottom_notes:
+            texts = (note.name or "").split("\n")
+            for i, text in enumerate(texts):
+                bottom.append({"desc": text, "style": "note_title" if i == 0 and len(texts) > 1 else "note"})
+        if bottom:
+            bottom.append({})
+        while len(rows) + len(bottom) < min_rows:
             rows.append({})
-        return rows
+        return rows + bottom
 
     # ------------------------------------------------------------------
     # Taxes / totals

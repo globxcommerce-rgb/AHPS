@@ -62,7 +62,7 @@
                     <tr t-foreach="ahps_rows" t-as="row">
                         <td class="c" t-out="row.get('pos', '')"/>
                         <td class="c" t-out="row.get('qty', '')"/>
-                        <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
+                        <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec', 'note_title': 'ahps-notetitle'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
                         <td class="r"><t t-if="row.get('price')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['price']"/></t></td>
                         <td class="c" t-out="row.get('disc', '')"/>
                         <td class="r"><t t-if="row.get('total')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['total']"/></t></td>
@@ -165,7 +165,7 @@
                     <tr t-foreach="ahps_rows" t-as="row">
                         <td class="c" t-out="row.get('pos', '').lstrip('0')"/>
                         <td class="c" t-out="row.get('qty', '')"/>
-                        <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
+                        <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec', 'note_title': 'ahps-notetitle'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
                         <td class="c" t-out="row.get('part', '') if row.get('style') == 'product' else ''"/>
                     </tr>
                 </tbody>

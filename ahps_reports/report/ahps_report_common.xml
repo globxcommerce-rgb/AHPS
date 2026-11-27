@@ -53,6 +53,7 @@
             .ahps-doc table.ahps-grid .r { text-align: right; }
             .ahps-doc .ahps-cur { float: left; }
             .ahps-doc .ahps-sec { font-weight: bold; text-decoration: underline; }
+            .ahps-doc .ahps-notetitle { font-weight: bold; font-style: italic; }
             .ahps-doc .ahps-subsec { font-weight: bold; font-style: italic; text-decoration: underline; }
             .ahps-doc table.ahps-totals td { padding: 0 3px; font-size: 10.5px; height: 14px; }
             .ahps-doc table.ahps-totals .b { font-weight: bold; }
@@ -73,7 +74,7 @@
              so the bottom of the customer/address boxes lines up with the bottom of the company box -->
         <table class="ahps-top">
             <tr>
-                <td style="width: 64%; padding-right: 10px;">
+                <td style="width: 63%; padding-right: 0;">
                     <table style="width: 100%;">
                         <tr>
                             <td class="ahps-logo" style="width: 40%;">
@@ -87,12 +88,13 @@
                         </tr>
                     </table>
                 </td>
-                <td rowspan="2" style="width: 36%; padding-left: 0;">
+                <td rowspan="2" style="width: 8%;"/>
+                <td rowspan="2" style="width: 29%; padding-left: 0;">
                     <t t-call="{{ ahps_right or 'ahps_reports.ahps_company_box' }}"/>
                 </td>
             </tr>
             <tr>
-                <td t-att-style="'vertical-align: bottom; padding-right: 10px; padding-top: %spx;' % (ahps_body_gap or 12)">
+                <td t-att-style="'vertical-align: bottom; padding-right: 0; padding-top: %spx;' % (ahps_body_gap or 12)">
                     <t t-out="0"/>
                 </td>
             </tr>

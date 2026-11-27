@@ -25,7 +25,7 @@
                     <td class="c" t-out="row.get('pos', '')"/>
                     <td class="c" t-out="row.get('qty', '')"/>
                     <td class="c" t-out="row.get('code', '')"/>
-                    <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
+                    <td t-att-class="{'section': 'ahps-sec', 'subsection': 'ahps-subsec', 'note_title': 'ahps-notetitle'}.get(row.get('style'), '')" t-out="row.get('desc', '')"/>
                     <td t-if="ahps_tariff" class="r" t-out="row.get('tariff', '')"/>
                     <td class="r"><t t-if="row.get('price')"><span class="ahps-cur" t-out="row['currency']"/><t t-out="row['price']"/></t></td>
                     <td class="c" t-out="row.get('disc', '')"/>
@@ -169,6 +169,37 @@
         <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="replace">
             <t t-if="doc.company_id.ahps_use_document_design" t-call="ahps_reports.report_saleorder_document" t-lang="doc.partner_id.lang"/>
             <t t-else="" t-call="sale.report_saleorder_document" t-lang="doc.partner_id.lang"/>
+        </xpath>
+    </template>
+
+    <!-- Odoo standard design (when "Use aHPS Document Design" is off): bank payment details and the
+         aHPS contact line under the totals, so they are on every quotation and PFI without typing them -->
+    <template id="report_saleorder_document_ahps_bank" inherit_id="sale.report_saleorder_document">
+        <xpath expr="//div[@name='so_total_summary']" position="after">
+            <t t-set="ahps_co" t-value="doc.company_id.sudo()"/>
+            <t t-set="ahps_banks" t-value="ahps_co._ahps_bank_accounts()"/>
+            <div t-if="not ahps_co.ahps_use_document_design" class="mt-4" name="ahps_bank_details" style="page-break-inside: avoid;">
+                <t t-if="ahps_banks">
+                    <div class="fw-bold">BANK PAYMENT DETAILS:</div>
+                    <div t-out="ahps_banks[0].bank_name"/>
+                    <div>Account Name: <t t-out="ahps_banks[0].partner_id.name"/></div>
+                    <table class="table-borderless" style="border: 0 none;">
+                        <tr t-foreach="ahps_banks" t-as="bank">
+                            <td class="p-0 pe-2" style="border: 0 none; white-space: nowrap;"><t t-if="bank_first">Account No.</t></td>
+                            <td class="p-0" style="border: 0 none;"><t t-out="bank.account_number"/><t t-set="bcur" t-value="bank._ahps_currency()"/><t t-if="bcur"> (<t t-out="bcur.name"/>)</t></td>
+                        </tr>
+                        <tr t-if="ahps_banks[0].bank_bic">
+                            <td class="p-0 pe-2" style="border: 0 none;"/>
+                            <td class="p-0" style="border: 0 none;">Swift Code <t t-out="ahps_banks[0].bank_bic"/></td>
+                        </tr>
+                    </table>
+                </t>
+                <div class="fw-bold mt-3">
+                    <div>In case you have any questions about this <t t-out="'proforma invoice' if env.context.get('proforma') else 'quotation'"/>,</div>
+                    <div>please contact aHPS Ltd. / Tel. <t t-out="ahps_co.ahps_sales_phone or ahps_co.phone"/> / <t t-out="ahps_co.ahps_sales_email or ahps_co.email"/></div>
+                    <div>Thank You For Your Business</div>
+                </div>
+            </div>
         </xpath>
     </template>
 </odoo>
