@@ -10,6 +10,9 @@
                     <group>
                         <group string="Document Design">
                             <field name="ahps_use_document_design"/>
+                            <field name="ahps_bank_account_ids" widget="many2many_tags"
+                                   domain="[('partner_id', '=', partner_id)]"
+                                   placeholder="All company bank accounts"/>
                         </group>
                     </group>
                     <group invisible="not ahps_use_document_design">
@@ -19,8 +22,6 @@
                             <field name="ahps_fx_risk_factor"/>
                             <field name="ahps_doc_signatory"/>
                             <field name="ahps_handling_charges"/>
-                            <field name="ahps_bank_account_ids" widget="many2many_tags"
-                                   domain="[('partner_id', '=', partner_id)]"/>
                         </group>
                         <group string="Contacts Printed">
                             <field name="ahps_sales_phone"/>

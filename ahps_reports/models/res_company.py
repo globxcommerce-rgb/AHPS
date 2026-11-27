@@ -34,7 +34,7 @@ class ResCompany(models.Model):
     ahps_po_invoice_contact_id = fields.Many2one("res.partner", string="PO Invoice Address Contact",
                                                  help="Printed as 'Att.' under the invoice address of purchase orders.")
     ahps_bank_account_ids = fields.Many2many("res.partner.bank", "ahps_company_bank_doc_rel", "company_id", "bank_id", string="Bank Accounts on Documents",
-                                             help="Bank accounts printed under 'Bank Payment Details'. "
+                                             help="Bank accounts printed under 'Bank Payment Details' (aHPS design and Odoo standard). "
                                                   "Leave empty to print all bank accounts of the company.")
     ahps_show_footer_logos = fields.Boolean(string="Print Partner Logos", default=True,
                                             help="Print the Pentair / Yakima Chief / Doemens / ATEC logos at the bottom of quotations, PFIs and invoices.")
