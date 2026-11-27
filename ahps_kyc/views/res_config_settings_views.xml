@@ -12,10 +12,13 @@
                         <field name="ahps_kyc_required"/>
                     </setting>
                     <setting id="ahps_kyc_public_registration" string="Public registration page"
-                             help="Let new customers and suppliers register themselves online, without an invitation.">
+                             help="Let new customers and suppliers register themselves online, without an invitation. Customers and suppliers each have their own form.">
                         <field name="ahps_kyc_public_registration"/>
                         <div class="mt-2" invisible="not ahps_kyc_public_registration">
+                            <div class="text-muted small">Customers</div>
                             <field name="ahps_kyc_public_url" widget="CopyClipboardChar" readonly="1"/>
+                            <div class="text-muted small mt-1">Suppliers</div>
+                            <field name="ahps_kyc_public_supplier_url" widget="CopyClipboardChar" readonly="1"/>
                         </div>
                     </setting>
                 </block>

@@ -17,7 +17,8 @@ REGISTRATION_TYPES = [
     ("supplier", "Supplier"),
 ]
 
-CUSTOMER_NUMBER_RE = re.compile(r"^\d{4}\.\d{3,}$")
+CUSTOMER_NUMBER_RE = re.compile(r"^C\d{4}\.\d{3,}$")
+SUPPLIER_NUMBER_RE = re.compile(r"^S\d{4}\.\d{3,}$")
 
 
 class ResPartner(models.Model):
@@ -41,12 +42,12 @@ class ResPartner(models.Model):
     # ---- Customer identification -----------------------------------------
     ahps_customer_number = fields.Char(
         string="Customer ID", copy=False, tracking=True, index=True,
-        help="aHPS customer number: year of registration and running number, e.g. 2026.021. "
+        help="aHPS customer number: year of registration and running number, e.g. C2026.021. "
         "Assigned automatically when the KYC is approved.",
     )
     ahps_supplier_number = fields.Char(
         string="Supplier ID", copy=False, tracking=True, index=True,
-        help="aHPS supplier number: year of registration and running number, e.g. 2026.066. "
+        help="aHPS supplier number: year of registration and running number, e.g. S2026.066. "
         "Assigned automatically when the KYC of a supplier is approved.",
     )
     ahps_registration_date = fields.Date(
@@ -202,12 +203,12 @@ class ResPartner(models.Model):
         for partner in self:
             if partner.ahps_customer_number and not CUSTOMER_NUMBER_RE.match(partner.ahps_customer_number):
                 raise ValidationError(self.env._(
-                    "Customer ID %(number)s must follow the format YYYY.NNN (e.g. 2026.021).",
+                    "Customer ID %(number)s must follow the format CYYYY.NNN (e.g. C2026.021).",
                     number=partner.ahps_customer_number,
                 ))
-            if partner.ahps_supplier_number and not CUSTOMER_NUMBER_RE.match(partner.ahps_supplier_number):
+            if partner.ahps_supplier_number and not SUPPLIER_NUMBER_RE.match(partner.ahps_supplier_number):
                 raise ValidationError(self.env._(
-                    "Supplier ID %(number)s must follow the format YYYY.NNN (e.g. 2026.066).",
+                    "Supplier ID %(number)s must follow the format SYYYY.NNN (e.g. S2026.066).",
                     number=partner.ahps_supplier_number,
                 ))
 
@@ -287,11 +288,6 @@ class ResPartner(models.Model):
             })
         return super()._message_post_after_hook(message)
 
-    def action_ahps_kyc_mark_requested(self):
-        self._ahps_check_kyc_company()
-        self._ahps_ensure_kyc_token()
-        self.write({"ahps_kyc_state": "requested", "ahps_kyc_requested_date": fields.Datetime.now()})
-
     def action_ahps_kyc_submit(self):
         self._ahps_check_kyc_company()
         for partner in self:
@@ -330,13 +326,13 @@ class ResPartner(models.Model):
         The running number continues after the highest number already used, so imported
         customers (e.g. up to 2026.237) are followed by 238 without manual set-up.
         """
-        return self._ahps_next_number("ahps_customer_number", "ahps.customer.number", registration_date)
+        return self._ahps_next_number("ahps_customer_number", "ahps.customer.number", registration_date, "C")
 
     def _ahps_next_supplier_number(self, registration_date):
         """Next supplier ID, same logic as the customer ID with its own running number."""
-        return self._ahps_next_number("ahps_supplier_number", "ahps.supplier.number", registration_date)
+        return self._ahps_next_number("ahps_supplier_number", "ahps.supplier.number", registration_date, "S")
 
-    def _ahps_next_number(self, field_name, sequence_code, registration_date):
+    def _ahps_next_number(self, field_name, sequence_code, registration_date, prefix):
         sequence = self.env["ir.sequence"].sudo().search([("code", "=", sequence_code)], limit=1)
         if not sequence:
             raise UserError(self.env._("The sequence '%s' is missing.", sequence_code))
@@ -345,12 +341,12 @@ class ResPartner(models.Model):
         self.env.cr.execute(f"""
             SELECT MAX(CAST(SPLIT_PART({field_name}, '.', 2) AS INTEGER))
               FROM res_partner
-             WHERE {field_name} ~ '^[0-9]{{4}}\\.[0-9]+$'
+             WHERE {field_name} ~ '^[CS]?[0-9]{{4}}\\.[0-9]+$'
         """)
         highest = self.env.cr.fetchone()[0] or 0
         if sequence.number_next_actual <= highest:
             sequence.number_next_actual = highest + 1
-        return f"{registration_date.year}.{sequence.next_by_id()}"
+        return f"{prefix}{registration_date.year}.{sequence.next_by_id()}"
 
     def action_ahps_kyc_approve(self):
         self._ahps_check_kyc_manager()

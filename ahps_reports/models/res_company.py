@@ -9,6 +9,16 @@ class ResCompany(models.Model):
         help="Price list holding the standard (EUR) prices. When a quotation is switched to another currency, "
              "prices are converted from it at the day's exchange rate.",
     )
+    ahps_use_document_design = fields.Boolean(
+        string="Use aHPS Document Design", default=True,
+        help="Print quotations, pro forma invoices, invoices, RFQs and purchase orders in the aHPS design. "
+             "Untick to print Odoo's standard layout (Settings > General Settings > Document Layout) instead.",
+    )
+    ahps_fx_risk_factor = fields.Float(
+        string="FX Risk Factor (%)", digits=(5, 2),
+        help="Default margin added to the day's exchange rate on quotations in another currency "
+             "than the base price list (e.g. 3 means rate x 1.03). Can be changed per quotation.",
+    )
     ahps_registration_no = fields.Char(string="Certificate of Registration", help="Printed as 'Cert. of Registration' on aHPS documents.")
     ahps_doc_signatory = fields.Char(string="Document Signatory", default="J. Mbugua",
                                      help="Name printed on the signature line of quotations, PFIs and RFQs.")

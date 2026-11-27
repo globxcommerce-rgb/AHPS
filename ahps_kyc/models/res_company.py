@@ -12,6 +12,7 @@ class ResCompany(models.Model):
     )
     ahps_kyc_public_registration = fields.Boolean(
         string="Public Registration Page",
-        help="Allow new customers and suppliers to register themselves at /kyc/register "
+        help="Allow new customers and suppliers to register themselves at /kyc/register/customer "
+        "or /kyc/register/supplier "
         "(for example from a link on the aHPS website or email signature).",
     )

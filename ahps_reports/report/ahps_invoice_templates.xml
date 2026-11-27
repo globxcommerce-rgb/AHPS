@@ -58,7 +58,6 @@
             <t t-set="ahps_number" t-value="o.name if o.name and o.name != '/' else ''"/>
             <t t-set="ahps_right" t-value="'ahps_reports.ahps_invoice_company_box'"/>
             <t t-set="ahps_number_style" t-value="'font-size: 10px; font-weight: bold;'"/>
-            <t t-set="ahps_body_gap" t-value="10"/>
             <t t-call="ahps_reports.ahps_doc_top">
                 <table style="width: 100%; font-size: 10.5px; border-collapse: collapse;">
                     <tr>
@@ -106,7 +105,7 @@
                 </tr>
             </table>
 
-            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=0)"/>
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=o._AHPS_INVOICE_ROWS)"/>
             <t t-set="ahps_code_label">Art No.</t>
             <t t-set="ahps_tariff" t-value="True"/>
             <t t-call="ahps_reports.ahps_line_grid"/>
@@ -127,7 +126,7 @@
                     </td>
                 </tr>
             </table>
-            <div style="font-size: 10px; margin-top: 2px;">
+            <div style="font-size: 10px; margin-top: 14px;">
                 <div>When paying the due amount, use our invoice number as reference !</div>
                 <div>In case you have any question on this invoice, please contact:
                     <span class="ahps-link" style="margin-left: 120px;" t-out="o.company_id.ahps_finance_email or o.company_id.email"/></div>

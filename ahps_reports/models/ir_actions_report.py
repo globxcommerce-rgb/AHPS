@@ -18,9 +18,14 @@ class IrActionsReport(models.Model):
     _inherit = "ir.actions.report"
 
     def get_paperformat(self):
-        if not self.paperformat_id and self.report_name in AHPS_REPORTS:
+        if self.report_name in AHPS_REPORTS:
             ahps_format = self.env.ref("ahps_reports.paperformat_ahps_a4", raise_if_not_found=False)
-            if ahps_format:
+            company = self.env.company
+            if not company.ahps_use_document_design:
+                # Odoo standard design: the company's own paper format
+                if ahps_format and self.paperformat_id == ahps_format:
+                    return company.paperformat_id or self.env.ref("base.paperformat_euro")
+            elif not self.paperformat_id and ahps_format:
                 return ahps_format
         return super().get_paperformat()
 

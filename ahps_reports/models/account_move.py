@@ -10,13 +10,15 @@ class AccountMove(models.Model):
 
     def _get_name_invoice_report(self):
         self.ensure_one()
-        if self.move_type in ("out_invoice", "out_refund"):
+        if self.move_type in ("out_invoice", "out_refund") and self.company_id.ahps_use_document_design:
             return "ahps_reports.report_invoice_document"
         return super()._get_name_invoice_report()
 
     # ---- report helpers ---------------------------------------------------
     def _ahps_sale_orders(self):
         return self.invoice_line_ids.sale_line_ids.order_id
+
+    _AHPS_INVOICE_ROWS = 46
 
     def _ahps_report_rows(self, min_rows=38):
         self.ensure_one()

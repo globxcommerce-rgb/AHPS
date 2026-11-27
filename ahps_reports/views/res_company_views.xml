@@ -8,9 +8,15 @@
             <xpath expr="//notebook" position="inside">
                 <page string="aHPS Documents" name="ahps_documents">
                     <group>
+                        <group string="Document Design">
+                            <field name="ahps_use_document_design"/>
+                        </group>
+                    </group>
+                    <group invisible="not ahps_use_document_design">
                         <group string="Company Details">
                             <field name="ahps_registration_no"/>
                             <field name="ahps_base_pricelist_id" options="{'no_create': True}"/>
+                            <field name="ahps_fx_risk_factor"/>
                             <field name="ahps_doc_signatory"/>
                             <field name="ahps_handling_charges"/>
                             <field name="ahps_bank_account_ids" widget="many2many_tags"

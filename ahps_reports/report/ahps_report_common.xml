@@ -30,7 +30,7 @@
             .ahps-doc { font-family: Calibri, Carlito, Arial, sans-serif; font-size: 11px; color: #000; }
             .ahps-doc table { border-collapse: collapse; border: 0 none; margin: 0; }
             .ahps-doc table, .ahps-doc thead, .ahps-doc tbody, .ahps-doc tr, .ahps-doc td, .ahps-doc th { border-style: none; border-width: 0; }
-            .ahps-doc .ahps-top { width: 100%; margin-bottom: 4px; }
+            .ahps-doc .ahps-top { width: 100%; margin-bottom: 0; }
             .ahps-doc .ahps-logo img { max-height: 64px; max-width: 170px; margin-top: 0; }
             .ahps-doc .ahps-title { text-align: center; font-size: 22px; font-weight: bold; }
             .ahps-doc .ahps-title .ahps-number { font-size: 13px; padding-top: 6px; }
@@ -63,14 +63,17 @@
             .ahps-doc .ahps-gridbox { border: 1px solid #000; }
             .ahps-doc .ahps-red { color: #FF0000; }
             .ahps-doc .ahps-top > tbody > tr > td { vertical-align: top; }
+            .ahps-doc .ahps-gap { height: 14px; }
         </style>
     </template>
 
     <!-- Two-column frame: [logo | TITLE (number)] + body on the left, company box on the right -->
     <template id="ahps_doc_top">
+        <!-- the company box spans both rows and the body sits at the bottom of the left column,
+             so the bottom of the customer/address boxes lines up with the bottom of the company box -->
         <table class="ahps-top">
             <tr>
-                <td style="width: 64%; padding-right: 0;">
+                <td style="width: 64%; padding-right: 10px;">
                     <table style="width: 100%;">
                         <tr>
                             <td class="ahps-logo" style="width: 40%;">
@@ -83,15 +86,18 @@
                             </td>
                         </tr>
                     </table>
-                    <div t-att-style="'padding-top: %spx;' % (ahps_body_gap or 4)">
-                        <t t-out="0"/>
-                    </div>
                 </td>
-                <td style="width: 36%; padding-left: 0;">
+                <td rowspan="2" style="width: 36%; padding-left: 0;">
                     <t t-call="{{ ahps_right or 'ahps_reports.ahps_company_box' }}"/>
                 </td>
             </tr>
+            <tr>
+                <td t-att-style="'vertical-align: bottom; padding-right: 10px; padding-top: %spx;' % (ahps_body_gap or 12)">
+                    <t t-out="0"/>
+                </td>
+            </tr>
         </table>
+        <div class="ahps-gap"/>
     </template>
 
     <template id="ahps_company_box">
@@ -145,7 +151,7 @@
 
     <!-- Contact line + thank you -->
     <template id="ahps_doc_bottom">
-        <div style="margin-top: 10px; font-size: 10.5px;">
+        <div style="margin-top: 16px; font-size: 10.5px;">
             In case you have any questions about this <t t-out="ahps_doc_label or 'quotation'"/>, please contact<br/>
             <b>aHPS Ltd.</b> / Tel. <b t-out="company.ahps_sales_phone or company.phone"/> / <b t-out="company.ahps_sales_email or company.email"/>
         </div>

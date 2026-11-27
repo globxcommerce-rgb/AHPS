@@ -10,12 +10,26 @@ class PurchaseOrder(models.Model):
         help="Customer the goods are for. Printed on the RFQ. Filled from the linked sales order or dropship address.",
     )
 
-    @api.depends("dest_address_id", "origin")
+    ahps_sale_order_id = fields.Many2one(
+        "sale.order", string="Sales Order", index="btree_not_null", copy=False,
+        domain="[('state', 'in', ('draft', 'sent', 'sale'))]",
+        help="Customer order this purchase is for (when the PO is created by hand). "
+             "The PO then shows on the sales order and its customer becomes the End User.",
+    )
+
+    @api.onchange("ahps_sale_order_id")
+    def _onchange_ahps_sale_order_id(self):
+        for order in self:
+            so = order.ahps_sale_order_id
+            if so and so.name not in (order.origin or ""):
+                order.origin = ", ".join(p for p in (order.origin, so.name) if p)
+
+    @api.depends("dest_address_id", "origin", "ahps_sale_order_id")
     def _compute_ahps_end_user_id(self):
         for order in self:
             partner = order.ahps_end_user_id
-            sale_orders = self.env["sale.order"]
-            if hasattr(order, "_get_sale_orders"):
+            sale_orders = order.ahps_sale_order_id
+            if not sale_orders and hasattr(order, "_get_sale_orders"):
                 sale_orders = order._get_sale_orders()
             if sale_orders:
                 partner = sale_orders[:1].partner_id.commercial_partner_id
@@ -32,6 +46,9 @@ class PurchaseOrder(models.Model):
             lambda s: s.partner_id == self.partner_id.commercial_partner_id and s.product_code
         )[:1]
         return seller.product_code or line.product_id.default_code or ""
+
+    _AHPS_PO_ROWS = 52
+    _AHPS_RFQ_ROWS = 48
 
     def _ahps_report_rows(self, min_rows=40, spacer=True):
         self.ensure_one()

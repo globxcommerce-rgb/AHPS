@@ -32,7 +32,7 @@
         <field name="parent_id" ref="partner_tag_end_user"/>
     </record>
     <record id="partner_tag_rest" model="res.partner.category">
-        <field name="name">Rest</field>
+        <field name="name">Others</field>
         <field name="parent_id" ref="partner_tag_end_user"/>
     </record>
 </odoo>

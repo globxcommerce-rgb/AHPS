@@ -34,7 +34,8 @@ class AhpsKycPortal(http.Controller):
             return request.not_found()
         if partner.ahps_kyc_state in ("submitted", "approved"):
             return self._render("ahps_kyc.portal_kyc_done", partner=partner)
-        return self._render_form(partner=partner, values=self._values_from_partner(partner), errors=[])
+        return self._render_form(partner=partner, values=self._values_from_partner(partner), errors=[],
+                                 reg_type=self._partner_reg_type(partner))
 
     @http.route("/kyc/<int:partner_id>/<string:token>", type="http", auth="public", website=False,
                 methods=["POST"], sitemap=False)
@@ -44,19 +45,25 @@ class AhpsKycPortal(http.Controller):
             return request.not_found()
         if partner.ahps_kyc_state in ("submitted", "approved"):
             return self._render("ahps_kyc.portal_kyc_done", partner=partner)
-        return self._process(partner, post)
+        return self._process(partner, post, self._partner_reg_type(partner))
 
-    @http.route("/kyc/register", type="http", auth="public", website=False, methods=["GET", "POST"], sitemap=False)
-    def kyc_register(self, **post):
+    @http.route("/kyc/register", type="http", auth="public", website=False, methods=["GET"], sitemap=False)
+    def kyc_register_legacy(self, **kw):
+        reg_type = kw.get("type") if kw.get("type") in ("customer", "supplier") else "customer"
+        return request.redirect(f"/kyc/register/{reg_type}", code=303)
+
+    @http.route("/kyc/register/<string:reg_type>", type="http", auth="public", website=False,
+                methods=["GET", "POST"], sitemap=False)
+    def kyc_register(self, reg_type, **post):
+        """Public self-registration: one separate, fixed form for customers and one for suppliers."""
         company = request.env["res.company"].sudo().search([], limit=1)
-        if not company.ahps_kyc_public_registration:
+        if not company.ahps_kyc_public_registration or reg_type not in ("customer", "supplier"):
             return request.not_found()
         if request.httprequest.method == "GET":
-            values = {"registration_type": post.get("type") if post.get("type") in ("customer", "supplier") else "customer"}
-            return self._render_form(partner=None, values=values, errors=[])
+            return self._render_form(partner=None, values={}, errors=[], reg_type=reg_type)
         if post.get("website_url"):  # honeypot: humans never fill this hidden field
             return self._render("ahps_kyc.portal_kyc_done", partner=None)
-        return self._process(None, post)
+        return self._process(None, post, reg_type)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -67,17 +74,22 @@ class AhpsKycPortal(http.Controller):
             return None
         return partner
 
+    @staticmethod
+    def _partner_reg_type(partner):
+        """The form type is fixed by 'Registers As' on the contact; the company cannot change it."""
+        return "supplier" if partner.ahps_registration_type == "supplier" else "customer"
+
     def _render(self, template, **values):
         company = request.env["res.company"].sudo().search([], limit=1)
         values.setdefault("company", company)
         return request.render(template, values)
 
-    def _render_form(self, partner, values, errors, kept=None):
+    def _render_form(self, partner, values, errors, reg_type, kept=None):
         env = request.env
         end_user = env.ref("ahps_kyc.partner_tag_end_user", raise_if_not_found=False)
         reseller = env.ref("ahps_kyc.partner_tag_reseller", raise_if_not_found=False)
         sectors = env["res.partner.category"].sudo().search([("parent_id", "=", end_user.id)]) if end_user else []
-        doc_types = env["ahps.kyc.document.type"].sudo().search([("portal_visible", "=", True)])
+        doc_types = env["ahps.kyc.document.type"].sudo()._ahps_types_for(reg_type).filtered("portal_visible")
         countries = env["res.country"].sudo().search([])
         currencies = env["res.currency"].sudo().search([("active", "=", True)])
         return self._render(
@@ -85,6 +97,8 @@ class AhpsKycPortal(http.Controller):
             partner=partner,
             values=values,
             errors=errors,
+            reg_type=reg_type,
+            is_supplier=reg_type == "supplier",
             end_user=end_user,
             reseller=reseller,
             sectors=sectors,
@@ -94,13 +108,12 @@ class AhpsKycPortal(http.Controller):
             contact_roles=CONTACT_ROLES,
             kept=kept or {},
             existing_docs=partner.ahps_kyc_document_ids if partner else env["ahps.kyc.document"],
-            action_url=f"/kyc/{partner.id}/{partner.ahps_kyc_token}" if partner else "/kyc/register",
+            action_url=f"/kyc/{partner.id}/{partner.ahps_kyc_token}" if partner else f"/kyc/register/{reg_type}",
         )
 
     def _values_from_partner(self, partner):
         """Pre-fill the form with what aHPS already knows about the company."""
         values = {
-            "registration_type": partner.ahps_registration_type or "customer",
             "name": partner.name or "",
             "company_registry": partner.ahps_company_registry or "",
             "vat": partner.vat or "",
@@ -144,12 +157,8 @@ class AhpsKycPortal(http.Controller):
                 })
         return values
 
-    def _validate(self, post):
+    def _validate(self, post, reg_type):
         errors = []
-        reg_type = post.get("registration_type")
-        if reg_type not in ("customer", "supplier"):
-            errors.append("Please choose whether you register as a customer or a supplier.")
-            reg_type = "customer"
         required = [
             ("name", "Company name"), ("company_registry", "Company registration number"),
             ("vat", "Tax Identification Number (TIN)"), ("phone", "Company phone"),
@@ -187,7 +196,7 @@ class AhpsKycPortal(http.Controller):
                         errors.append(f"{label}: {sub} is required (or tick 'same as physical address').")
         if not post.get("declaration"):
             errors.append("Please confirm the declaration.")
-        return errors, reg_type
+        return errors
 
     def _uploaded_documents(self, reg_type, partner):
         """Validate uploaded files. Returns (documents to create, errors)."""
@@ -252,12 +261,13 @@ class AhpsKycPortal(http.Controller):
             return None
         return attachment
 
-    def _process(self, partner, post):
-        errors, reg_type = self._validate(post)
+    def _process(self, partner, post, reg_type):
+        errors = self._validate(post, reg_type)
         docs, doc_errors = self._uploaded_documents(reg_type, partner)
         errors += doc_errors
         if errors:
-            return self._render_form(partner=partner, values=post, errors=errors, kept=self._keep_uploads(docs))
+            return self._render_form(partner=partner, values=post, errors=errors, reg_type=reg_type,
+                                     kept=self._keep_uploads(docs))
         Partner = request.env["res.partner"].sudo()
         is_new = partner is None
         try:
@@ -269,7 +279,8 @@ class AhpsKycPortal(http.Controller):
         except (UserError, ValidationError) as e:
             _logger.info("KYC form for partner %s rejected: %s", partner and partner.id, e)
             return self._render_form(partner=None if is_new else partner, values=post,
-                                     errors=[str(e.args[0]) if e.args else str(e)], kept=self._keep_uploads(docs))
+                                     errors=[str(e.args[0]) if e.args else str(e)], reg_type=reg_type,
+                                     kept=self._keep_uploads(docs))
         # redirect after a successful submit, so refreshing the page or going back cannot post the form again
         return request.redirect(f"/kyc/{partner.id}/{partner.ahps_kyc_token}", code=303)
 

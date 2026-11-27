@@ -82,13 +82,13 @@
         with <t t-out="user.company_id.name or ''">aHPS</t> is approved.</p>
     <t t-if="object.ahps_registration_type == 'supplier'">
         <div style="margin: 12px 0px; padding: 10px 14px; background-color: #EAF3E6; border-left: 4px solid #4E9A2E;">
-            Your supplier ID: <strong t-out="object.ahps_supplier_number or ''">2026.066</strong>
+            Your supplier ID: <strong t-out="object.ahps_supplier_number or ''">S2026.066</strong>
         </div>
         <p>Please quote this ID in your correspondence, invoices and delivery documents to us.</p>
     </t>
     <t t-else="">
         <div style="margin: 12px 0px; padding: 10px 14px; background-color: #EAF3E6; border-left: 4px solid #4E9A2E;">
-            Your customer ID: <strong t-out="object.ahps_customer_number or ''">2026.238</strong>
+            Your customer ID: <strong t-out="object.ahps_customer_number or ''">C2026.238</strong>
         </div>
         <p>This ID appears on all our quotations and invoices. Please quote it in your purchase orders and
             payments to us.</p>

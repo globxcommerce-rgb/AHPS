@@ -11,9 +11,6 @@
                     <button name="action_ahps_kyc_send_request" type="object" string="Send KYC Link"
                             class="btn-primary" invisible="ahps_kyc_state not in ('not_started', 'rejected')"
                             groups="ahps_kyc.group_ahps_kyc_user"/>
-                    <button name="action_ahps_kyc_mark_requested" type="object" string="Get KYC Link"
-                            invisible="ahps_kyc_state != 'not_started'" groups="ahps_kyc.group_ahps_kyc_user"
-                            help="Create the online form link without sending the email (to share it yourself)."/>
                     <button name="action_ahps_kyc_send_request" type="object" string="Resend KYC Link"
                             invisible="ahps_kyc_state != 'requested'" groups="ahps_kyc.group_ahps_kyc_user"/>
                     <button name="action_ahps_kyc_submit" type="object" string="Submit KYC for Review"
@@ -63,9 +60,9 @@
                 <page name="ahps_kyc" string="KYC" invisible="parent_id">
                     <group>
                         <group string="Customer Identification">
-                            <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. 2026.021"
+                            <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. C2026.021"
                                    readonly="1" groups="!ahps_kyc.group_ahps_kyc_manager"/>
-                            <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. 2026.021"
+                            <field name="ahps_customer_number" placeholder="Assigned on approval, e.g. C2026.021"
                                    groups="ahps_kyc.group_ahps_kyc_manager"/>
                             <field name="ahps_supplier_number" placeholder="Assigned on approval of a supplier"
                                    readonly="1" groups="!ahps_kyc.group_ahps_kyc_manager"

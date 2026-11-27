@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import Command, api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -6,12 +6,6 @@ class SaleOrder(models.Model):
     _name = "sale.order"
     _inherit = ["sale.order", "ahps.report.mixin"]
 
-    ahps_quote_category = fields.Selection(
-        [("instrument", "Instruments"), ("spare_parts", "Spare Parts"), ("service", "Service")],
-        string="Quotation Category", compute="_compute_ahps_quote_category", store=True, readonly=False,
-        help="Used to analyse quotations and revenue by category. Service quotations print "
-             "the S/N column and a Subtotal.",
-    )
     ahps_currency_id = fields.Many2one(
         "res.currency", string="Quote Currency", compute="_compute_ahps_currency_id", store=True, readonly=False,
         precompute=True, domain="[('active', '=', True)]",
@@ -29,6 +23,13 @@ class SaleOrder(models.Model):
         string="Applied Rate", digits=(12, 6), copy=False,
         help="Technical: rate at which the current line prices are expressed.",
     )
+    ahps_fx_risk_factor = fields.Float(
+        string="FX Risk Factor (%)", digits=(5, 2),
+        default=lambda self: self.env.company.ahps_fx_risk_factor,
+        help="Margin added to the day's exchange rate to cover currency movements until payment: "
+             "quote rate = day's rate x (1 + factor). E.g. 140 with 3% gives 144.20. "
+             "You can still type your own exchange rate afterwards.",
+    )
     ahps_fx_rate_date = fields.Date(string="Rate Date", copy=False)
     ahps_fx_base_currency_id = fields.Many2one("res.currency", string="Base Currency", copy=False)
     ahps_pfi_number = fields.Char(string="PFI No.", copy=False, readonly=True)
@@ -38,6 +39,11 @@ class SaleOrder(models.Model):
     ahps_port_destination = fields.Char(string="Port of Destination")
     ahps_packing_details = fields.Char(string="Packing Details", help="e.g. 43 x 35 x 32 cm")
     ahps_gross_weight = fields.Char(string="Gross Weight", help="e.g. Approx. 8.0 Kg")
+    ahps_purchase_order_ids = fields.One2many(
+        "purchase.order", "ahps_sale_order_id", string="Linked Purchase Orders",
+        help="Purchase orders placed with suppliers for this sales order.",
+    )
+    ahps_purchase_order_count = fields.Integer(compute="_compute_ahps_purchase_order_count")
 
     # ---- currency switch -----------------------------------------------------
     @api.depends("pricelist_id", "company_id")
@@ -108,6 +114,13 @@ class SaleOrder(models.Model):
         self._ahps_check_rate(currency, date)
         return base_currency._convert(1.0, currency, self.company_id, date, round=False)
 
+    def _ahps_quote_rate(self, currency):
+        """Rate used on the quotation: the day's rate plus the FX risk factor."""
+        rate = self._ahps_system_rate(currency)
+        if currency == self._ahps_base_currency():
+            return rate
+        return rate * (1.0 + (self.ahps_fx_risk_factor or 0.0) / 100.0)
+
     def _ahps_current_rate(self):
         """Rate (base currency -> order currency) at which the current line prices are expressed."""
         self.ensure_one()
@@ -120,7 +133,7 @@ class SaleOrder(models.Model):
         """Return (pricelist, {line: new price}, fx info) to convert this order to `new_currency`."""
         self.ensure_one()
         old_rate = self._ahps_current_rate()
-        new_rate = self._ahps_system_rate(new_currency)
+        new_rate = self._ahps_quote_rate(new_currency)
         factor = new_rate / old_rate if old_rate else 1.0
         pricelist = self._ahps_pricelist_for_currency(new_currency)
         prices = {
@@ -170,6 +183,18 @@ class SaleOrder(models.Model):
                 line.price_unit = price
             order.ahps_fx_applied_rate = order.ahps_fx_rate
 
+    @api.onchange("ahps_fx_risk_factor")
+    def _onchange_ahps_fx_risk_factor(self):
+        for order in self:
+            if order.state not in ("draft", "sent") or order.currency_id == order._ahps_base_currency():
+                continue
+            new_rate = order._ahps_quote_rate(order.currency_id)
+            for line, (price, technical) in order._ahps_rate_change_prices(new_rate).items():
+                line.technical_price_unit = technical
+                line.price_unit = price
+            order.ahps_fx_rate = new_rate
+            order.ahps_fx_applied_rate = new_rate
+
     def write(self, vals):
         if "ahps_fx_rate" in vals and vals["ahps_fx_rate"] is not False and vals["ahps_fx_rate"] <= 0:
             raise UserError(self.env._("The exchange rate must be greater than zero."))
@@ -181,7 +206,19 @@ class SaleOrder(models.Model):
         if "ahps_fx_rate" in vals:
             for order in self.filtered(lambda o: o.state in ("draft", "sent")):
                 order._ahps_apply_rate(order.ahps_fx_rate)
+        elif "ahps_fx_risk_factor" in vals and "ahps_currency_id" not in vals:
+            for order in self.filtered(lambda o: o.state in ("draft", "sent")):
+                if order.currency_id != order._ahps_base_currency():
+                    order._ahps_apply_rate(order._ahps_quote_rate(order.currency_id))
+        if "incoterm" in vals:
+            self.filtered(lambda o: o.state in ("draft", "sent"))._ahps_sync_shipping_line()
         return res
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        orders = super().create(vals_list)
+        orders.filtered("incoterm")._ahps_sync_shipping_line()
+        return orders
 
     def _ahps_apply_rate(self, rate):
         """Server-side rate change (same as the onchange, for imports and API calls)."""
@@ -205,22 +242,98 @@ class SaleOrder(models.Model):
         for line, (price, technical) in prices.items():
             line.write({"technical_price_unit": technical, "price_unit": price})
 
-    @api.depends("order_line.product_id")
-    def _compute_ahps_quote_category(self):
+    # ---- shipping line from the Incoterm ----------------------------------
+    @api.model
+    def _ahps_shipping_product(self):
+        """Product used for the automatic shipping line (created on first use)."""
+        Product = self.env["product.product"].sudo()
+        product = Product.search([("ahps_charge_type", "=", "shipping"), ("sale_ok", "=", True)], limit=1)
+        if not product:
+            product = Product.create({
+                "name": "Shipping Charges",
+                "type": "service",
+                "ahps_charge_type": "shipping",
+                "sale_ok": True,
+                "purchase_ok": False,
+                "list_price": 0.0,
+                "invoice_policy": "order",
+            })
+        return product
+
+    def _ahps_needs_shipping(self):
+        self.ensure_one()
+        return bool(self.incoterm) and (self.incoterm.code or "").upper() != "EXW"
+
+    def _ahps_shipping_line_values(self):
+        self.ensure_one()
+        product = self._ahps_shipping_product()
+        return {
+            "product_id": product.id,
+            "name": "Shipping Charges (%s)" % self._ahps_delivery_terms(),
+            "product_uom_qty": 1.0,
+            "price_unit": 0.0,
+            "ahps_auto_shipping": True,
+            "sequence": max(self.order_line.mapped("sequence") or [10]) + 1,
+        }
+
+    def _ahps_sync_shipping_line(self):
+        """Any Incoterm except EXW adds a 'Shipping Charges' line (price to fill in); EXW removes it."""
         for order in self:
-            if order.ahps_quote_category:
+            auto = order.order_line.filtered("ahps_auto_shipping")
+            if order._ahps_needs_shipping():
+                has_shipping = order.order_line.filtered(
+                    lambda l: l.product_id.product_tmpl_id.ahps_charge_type == "shipping")
+                if auto:
+                    auto.write({"name": "Shipping Charges (%s)" % order._ahps_delivery_terms()})
+                elif not has_shipping:
+                    order.write({"order_line": [Command.create(order._ahps_shipping_line_values())]})
+            elif auto:
+                auto.unlink()
+
+    @api.onchange("incoterm")
+    def _onchange_ahps_incoterm_shipping(self):
+        for order in self:
+            if order.state not in ("draft", "sent"):
                 continue
-            products = order.order_line.filtered(
-                lambda l: not l.display_type and l.product_id and not l.product_id.product_tmpl_id.ahps_charge_type
-            ).product_id
-            if not products:
-                continue
-            services = products.filtered(lambda p: p.type == "service")
-            # documentation/handling services don't make a service quotation on their own
-            if len(services) > len(products) / 2:
-                order.ahps_quote_category = "service"
-            else:
-                order.ahps_quote_category = "instrument"
+            auto = order.order_line.filtered("ahps_auto_shipping")
+            if order._ahps_needs_shipping():
+                has_shipping = order.order_line.filtered(
+                    lambda l: l.product_id.product_tmpl_id.ahps_charge_type == "shipping")
+                if auto:
+                    auto.name = "Shipping Charges (%s)" % order._ahps_delivery_terms()
+                elif not has_shipping:
+                    order.order_line = [Command.create(order._ahps_shipping_line_values())]
+            elif auto:
+                order.order_line = [Command.delete(line.id) for line in auto]
+
+    # ---- linked purchase orders -------------------------------------------
+    @api.depends("ahps_purchase_order_ids")
+    def _compute_ahps_purchase_order_count(self):
+        for order in self:
+            order.ahps_purchase_order_count = len(order.ahps_purchase_order_ids)
+
+    def action_ahps_view_purchase_orders(self):
+        self.ensure_one()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": self.env._("Purchase Orders"),
+            "res_model": "purchase.order",
+            "view_mode": "list,form",
+            "domain": [("ahps_sale_order_id", "=", self.id)],
+            "context": {"default_ahps_sale_order_id": self.id, "default_origin": self.name},
+        }
+        if len(self.ahps_purchase_order_ids) == 1:
+            action.update(view_mode="form", res_id=self.ahps_purchase_order_ids.id)
+        return action
+
+    def _ahps_is_service_quote(self):
+        """Mostly services (not counting shipping/other charges): prints the S/N column and a Subtotal."""
+        self.ensure_one()
+        products = self.order_line.filtered(
+            lambda l: not l.display_type and l.product_id and not l.product_id.product_tmpl_id.ahps_charge_type
+        ).product_id
+        services = products.filtered(lambda p: p.type == "service")
+        return bool(products) and len(services) > len(products) / 2
 
     def _ahps_ensure_pfi_number(self):
         for order in self.filtered(lambda o: not o.ahps_pfi_number):
@@ -236,6 +349,10 @@ class SaleOrder(models.Model):
             "ahps_final_destination": self.ahps_port_destination or self.partner_shipping_id.country_id.name,
         })
         return vals
+
+    # rows printed in the line grid (empty rows fill the page, as on the aHPS paper templates)
+    _AHPS_QUOTE_ROWS = 44
+    _AHPS_PFI_ROWS = 42
 
     # ---- report helpers ---------------------------------------------------
     def _ahps_report_rows(self, min_rows=30):
@@ -261,7 +378,7 @@ class SaleOrder(models.Model):
             "tax_due": self._ahps_fmt_amount(self.amount_tax, cur),
             "total": self._ahps_fmt_amount(self.amount_total, cur, dash_if_zero=False),
             "symbol": cur.symbol,
-            "has_service": self.ahps_quote_category == "service",
+            "has_service": self._ahps_is_service_quote(),
         }
 
     def _ahps_delivery_terms(self):
@@ -274,6 +391,11 @@ class SaleOrder(models.Model):
 
 class SaleOrderLine(models.Model):
     _inherit = "sale.order.line"
+
+    ahps_auto_shipping = fields.Boolean(
+        string="Automatic Shipping Line", copy=False,
+        help="Added automatically because the Incoterm is not EXW; removed again if it is set to EXW.",
+    )
 
     def _reset_price_unit(self):
         """Prices from the derived price list use the day's rate: apply the quote's own rate instead."""

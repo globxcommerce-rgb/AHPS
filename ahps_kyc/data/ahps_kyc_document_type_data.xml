@@ -30,6 +30,12 @@
         <field name="applies_to">supplier</field>
         <field name="required" eval="True"/>
     </record>
+    <record id="kyc_doc_type_audited_accounts" model="ahps.kyc.document.type">
+        <field name="name">Latest Audited Accounts</field>
+        <field name="sequence">6</field>
+        <field name="applies_to">supplier</field>
+        <field name="required" eval="True"/>
+    </record>
     <record id="kyc_doc_type_kyc_form" model="ahps.kyc.document.type">
         <field name="name">Signed KYC Form (paper)</field>
         <field name="sequence">20</field>

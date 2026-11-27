@@ -2,11 +2,10 @@
 <odoo>
     <!-- One contact person block on the KYC form -->
     <template id="portal_kyc_contact_block">
-        <t t-set="role_required" t-value="req_supplier if values.get('registration_type') == 'supplier' else req_customer"/>
-        <div class="col-12 ahps-kyc-contact" t-att-data-required-customer="'1' if req_customer else '0'"
-             t-att-data-required-supplier="'1' if req_supplier else '0'" t-att-data-role="prefix">
+        <t t-set="role_required" t-value="req_supplier if is_supplier else req_customer"/>
+        <div class="col-12 ahps-kyc-contact" t-att-data-role="prefix">
             <div class="d-flex align-items-center mt-3 mb-1">
-                <h6 class="mb-0 me-3"><t t-out="label"/><span class="text-danger ahps-req-mark">*</span>
+                <h6 class="mb-0 me-3"><t t-out="label"/><span t-if="role_required" class="text-danger"> *</span>
                     <small t-if="prefix == 'procurement'" class="text-muted fw-normal"> (receives quotations, sends purchase orders)</small>
                     <small t-if="prefix == 'finance'" class="text-muted fw-normal"> (receives invoices, processes payments)</small>
                     <small t-if="prefix == 'authorized'" class="text-muted fw-normal"> (authorised to sign for the company)</small>
@@ -65,8 +64,10 @@
                                     <div t-out="company.email"/>
                                 </div>
                             </div>
-                            <h3 class="mt-3 mb-1">Customer &amp; Supplier Registration (KYC)</h3>
-                            <p class="text-muted">Please complete this form so we can register your company.
+                            <h3 class="mt-3 mb-1" t-if="is_supplier">Supplier Registration (KYC)</h3>
+                            <h3 class="mt-3 mb-1" t-else="">Customer Registration (KYC)</h3>
+                            <p class="text-muted">Please complete this form so we can register your company
+                                as <t t-if="is_supplier">a supplier to</t><t t-else="">a customer of</t> <t t-out="company.name"/>.
                                 Fields marked <span class="text-danger">*</span> are required.</p>
 
                             <div t-if="partner and partner.ahps_kyc_state == 'rejected'" class="alert alert-warning">
@@ -83,23 +84,8 @@
                                 <input type="text" name="website_url" value="" tabindex="-1" autocomplete="off"
                                        style="position: absolute; left: -5000px;" aria-hidden="true"/>
 
-                                <!-- 1. Registration type -->
-                                <h5 class="border-bottom pb-1 mt-3">1. You are registering as</h5>
-                                <div class="d-flex gap-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input ahps-regtype" type="radio" name="registration_type" id="rt_customer" value="customer"
-                                               t-att-checked="values.get('registration_type', 'customer') == 'customer' and 'checked'"/>
-                                        <label class="form-check-label" for="rt_customer">Customer <small class="text-muted">(you buy from aHPS)</small></label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input ahps-regtype" type="radio" name="registration_type" id="rt_supplier" value="supplier"
-                                               t-att-checked="values.get('registration_type') == 'supplier' and 'checked'"/>
-                                        <label class="form-check-label" for="rt_supplier">Supplier <small class="text-muted">(you sell to aHPS)</small></label>
-                                    </div>
-                                </div>
-
-                                <!-- 2. Company -->
-                                <h5 class="border-bottom pb-1 mt-4">2. Company information</h5>
+                                <!-- 1. Company -->
+                                <h5 class="border-bottom pb-1 mt-3">1. Company information</h5>
                                 <div class="row g-3">
                                     <div class="col-md-6"><label class="form-label">Company name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" name="name" required="required" t-att-value="values.get('name')"/></div>
@@ -117,7 +103,7 @@
                                         <input type="text" class="form-control" name="website" t-att-value="values.get('website')"/></div>
                                     <div class="col-md-6"><label class="form-label">Company group <small class="text-muted">(if part of a group / conglomerate)</small></label>
                                         <input type="text" class="form-control" name="company_group" t-att-value="values.get('company_group')"/></div>
-                                    <div class="col-md-6 ahps-customer-only">
+                                    <div class="col-md-6" t-if="not is_supplier">
                                         <label class="form-label">Type of company <span class="text-danger">*</span></label>
                                         <div class="d-flex gap-3 align-items-center">
                                             <div class="form-check">
@@ -140,8 +126,8 @@
                                     </div>
                                 </div>
 
-                                <!-- 3. Addresses -->
-                                <h5 class="border-bottom pb-1 mt-4">3. Addresses</h5>
+                                <!-- 2. Addresses -->
+                                <h5 class="border-bottom pb-1 mt-4">2. Addresses</h5>
                                 <div class="row g-2">
                                     <div class="col-12"><h6 class="mb-1">Physical address <span class="text-danger">*</span></h6></div>
                                     <div class="col-md-6"><input type="text" class="form-control" name="street" placeholder="Street / building" required="required" t-att-value="values.get('street')"/></div>
@@ -164,8 +150,8 @@
                                     </t>
                                 </div>
 
-                                <!-- 4. Contact persons -->
-                                <h5 class="border-bottom pb-1 mt-4">4. Contact persons</h5>
+                                <!-- 3. Contact persons -->
+                                <h5 class="border-bottom pb-1 mt-4">3. Contact persons</h5>
                                 <div class="row">
                                     <t t-foreach="contact_roles" t-as="role">
                                         <t t-set="prefix" t-value="role[0]"/>
@@ -176,14 +162,14 @@
                                     </t>
                                 </div>
 
-                                <!-- 5. Bank details (suppliers) -->
-                                <div class="ahps-supplier-only">
-                                    <h5 class="border-bottom pb-1 mt-4">5. Payment information</h5>
+                                <!-- 4. Bank details (suppliers only) -->
+                                <div t-if="is_supplier">
+                                    <h5 class="border-bottom pb-1 mt-4">4. Payment information</h5>
                                     <div class="row g-2">
                                         <div class="col-md-4"><label class="form-label">Bank name <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" name="bank_name" t-att-value="values.get('bank_name')"/></div>
+                                            <input type="text" class="form-control" name="bank_name" required="required" t-att-value="values.get('bank_name')"/></div>
                                         <div class="col-md-4"><label class="form-label">Account No. <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" name="bank_account" t-att-value="values.get('bank_account')"/></div>
+                                            <input type="text" class="form-control" name="bank_account" required="required" t-att-value="values.get('bank_account')"/></div>
                                         <div class="col-md-4"><label class="form-label">Currency</label>
                                             <select class="form-select" name="bank_currency_id">
                                                 <option value="">Currency...</option>
@@ -201,13 +187,13 @@
                                 </div>
 
                                 <!-- 6. Documents -->
-                                <h5 class="border-bottom pb-1 mt-4"><span class="ahps-doc-section-no">6</span>. Documents</h5>
+                                <h5 class="border-bottom pb-1 mt-4"><t t-out="5 if is_supplier else 4"/>. Documents</h5>
                                 <p class="small text-muted mb-2">PDF, JPG or PNG, max. 10 MB each.</p>
                                 <div class="row g-2">
                                     <t t-foreach="doc_types" t-as="dt">
                                         <t t-set="already" t-value="existing_docs.filtered(lambda d: d.document_type_id == dt)"/>
                                         <t t-set="kept_doc" t-value="kept.get(dt.id)"/>
-                                        <div class="col-md-6 ahps-doc" t-att-data-applies="dt.applies_to">
+                                        <div class="col-md-6">
                                             <label class="form-label mb-1"><t t-out="dt.name"/>
                                                 <span t-if="dt.required" class="text-danger">*</span>
                                                 <small t-if="already and not kept_doc" class="text-success ms-1">(already received - upload again to replace)</small>
@@ -222,7 +208,7 @@
                                 </div>
 
                                 <!-- 7. Declaration -->
-                                <h5 class="border-bottom pb-1 mt-4"><span class="ahps-decl-section-no">7</span>. Declaration</h5>
+                                <h5 class="border-bottom pb-1 mt-4"><t t-out="6 if is_supplier else 5"/>. Declaration</h5>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="declaration" id="declaration" required="required"
                                            t-att-checked="values.get('declaration') and 'checked'"/>
@@ -250,19 +236,7 @@
     if (!form) { return; }
     function show(el, visible) { el.style.display = visible ? '' : 'none'; }
     function refresh() {
-        var checked = form.querySelector('input[name="registration_type"]:checked');
-        var isSupplier = checked ? checked.value === 'supplier' : false;
-        form.querySelectorAll('.ahps-customer-only').forEach(function (el) { show(el, !isSupplier); });
-        form.querySelectorAll('.ahps-supplier-only').forEach(function (el) { show(el, isSupplier); });
-        form.querySelector('.ahps-doc-section-no').textContent = isSupplier ? '6' : '5';
-        form.querySelector('.ahps-decl-section-no').textContent = isSupplier ? '7' : '6';
-        form.querySelectorAll('.ahps-doc').forEach(function (el) {
-            var applies = el.dataset.applies;
-            show(el, applies === 'both' || applies === (isSupplier ? 'supplier' : 'customer'));
-        });
         form.querySelectorAll('.ahps-kyc-contact').forEach(function (el) {
-            var required = el.dataset[isSupplier ? 'requiredSupplier' : 'requiredCustomer'] === '1';
-            el.querySelector('.ahps-req-mark').style.display = required ? '' : 'none';
             var same = el.querySelector('.ahps-same-contact');
             show(el.querySelector('.ahps-contact-fields'), same ? !same.checked : true);
         });
@@ -270,7 +244,8 @@
             show(cb.closest('.col-12').querySelector('.ahps-address-fields'), !cb.checked);
         });
         var endUser = form.querySelector('#cat_end_user');
-        show(form.querySelector('.ahps-sector'), endUser ? endUser.checked : false);
+        var sector = form.querySelector('.ahps-sector');
+        if (sector) { show(sector, endUser ? endUser.checked : false); }
     }
     form.addEventListener('change', refresh);
     refresh();

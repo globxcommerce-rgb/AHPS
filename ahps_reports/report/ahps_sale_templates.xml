@@ -90,7 +90,7 @@
             </table>
             </t>
 
-            <t t-set="ahps_rows" t-value="doc._ahps_report_rows(min_rows=0)"/>
+            <t t-set="ahps_rows" t-value="doc._ahps_report_rows(min_rows=doc._AHPS_PFI_ROWS if is_proforma else doc._AHPS_QUOTE_ROWS)"/>
             <t t-set="ahps_code_label" t-value="'ID NO.' if is_proforma else ('S/N' if t['has_service'] else '')"/>
             <t t-set="ahps_tariff" t-value="False"/>
             <t t-call="ahps_reports.ahps_line_grid"/>
@@ -98,7 +98,7 @@
             <!-- Terms and conditions | totals -->
             <table style="width: 100%; page-break-inside: avoid;">
                 <tr>
-                    <td style="width: 64%; vertical-align: top; padding-top: 8px;">
+                    <td style="width: 64%; vertical-align: top; padding-top: 12px;">
                         <div class="ahps-gridbox" style="padding: 2px 4px; min-height: 150px;">
                             <div style="font-weight: bold;">TERMS AND CONDITIONS<t t-if="not is_proforma">:</t></div>
                             <t t-set="sep" t-value="'' if is_proforma else ': '"/>
@@ -120,7 +120,7 @@
                             </div>
                         </div>
                     </td>
-                    <td style="width: 36%; vertical-align: top;">
+                    <td style="width: 36%; vertical-align: top; padding-top: 4px;">
                         <table class="ahps-totals" style="width: 100%;">
                             <colgroup><col style="width: 52%;"/><col style="width: 10%;"/><col style="width: 38%;"/></colgroup>
                             <t t-if="is_proforma">
@@ -146,20 +146,29 @@
                     </td>
                 </tr>
             </table>
-            <t t-set="ahps_doc_label" t-value="'quotation'"/>
+            <t t-set="ahps_doc_label" t-value="'proforma invoice' if is_proforma else 'quotation'"/>
             <t t-call="ahps_reports.ahps_doc_bottom"/>
+            <!-- general Terms &amp; Conditions (Sales settings / quotation "Terms and conditions" field) -->
+            <div t-if="not is_html_empty(doc.note)" style="margin-top: 18px; font-size: 9.5px; page-break-inside: avoid;">
+                <div style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">GENERAL TERMS &amp;amp; CONDITIONS</div>
+                <div t-out="doc.note"/>
+            </div>
         </t>
     </template>
 
     <!-- Hook the aHPS layout into the standard print actions -->
+    <!-- Hook the aHPS layout into the standard print actions ("Use aHPS document design" on the company;
+         when it is off, Odoo's standard layout prints) -->
     <template id="report_saleorder_raw_ahps" inherit_id="sale.report_saleorder_raw">
-        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="attributes">
-            <attribute name="t-call">ahps_reports.report_saleorder_document</attribute>
+        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="replace">
+            <t t-if="doc.company_id.ahps_use_document_design" t-call="ahps_reports.report_saleorder_document" t-lang="doc.partner_id.lang"/>
+            <t t-else="" t-call="sale.report_saleorder_document" t-lang="doc.partner_id.lang"/>
         </xpath>
     </template>
     <template id="report_saleorder_pro_forma_ahps" inherit_id="sale.report_saleorder_pro_forma">
-        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="attributes">
-            <attribute name="t-call">ahps_reports.report_saleorder_document</attribute>
+        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="replace">
+            <t t-if="doc.company_id.ahps_use_document_design" t-call="ahps_reports.report_saleorder_document" t-lang="doc.partner_id.lang"/>
+            <t t-else="" t-call="sale.report_saleorder_document" t-lang="doc.partner_id.lang"/>
         </xpath>
     </template>
 </odoo>

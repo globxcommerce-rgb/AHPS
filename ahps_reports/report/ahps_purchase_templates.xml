@@ -15,7 +15,6 @@
             <t t-set="ahps_number" t-value="False"/>
             <t t-set="ahps_right" t-value="'ahps_reports.ahps_po_right'"/>
             <t t-set="ahps_title_top" t-value="14"/>
-            <t t-set="ahps_body_gap" t-value="14"/>
             <t t-call="ahps_reports.ahps_doc_top">
                 <table style="width: 100%; border: 1px solid #999; font-size: 10px; border-collapse: collapse;">
                     <tr>
@@ -49,9 +48,8 @@
                     </tr>
                 </table>
             </t>
-            <div style="height: 14px;"/>
 
-            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=0)"/>
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=o._AHPS_PO_ROWS)"/>
             <table class="ahps-grid">
                 <colgroup>
                     <col style="width: 7%;"/><col style="width: 7%;"/><col style="width: 50%;"/>
@@ -96,7 +94,7 @@
                     </td>
                 </tr>
             </table>
-            <div style="font-size: 10px; margin-top: 10px;">
+            <div style="font-size: 10px; margin-top: 16px;">
                 In case of any questions about this purchase order, please contact<br/>
                 <span class="ahps-link" t-out="company.ahps_operations_contact or ''"/>
             </div>
@@ -159,7 +157,7 @@
             </table>
             </t>
 
-            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=0, spacer=False)"/>
+            <t t-set="ahps_rows" t-value="o._ahps_report_rows(min_rows=o._AHPS_RFQ_ROWS, spacer=False)"/>
             <table class="ahps-grid">
                 <colgroup><col style="width: 4%;"/><col style="width: 4%;"/><col style="width: 56%;"/><col style="width: 36%;"/></colgroup>
                 <thead><tr><th>POS</th><th>QTY</th><th>DESCRIPTION</th><th class="c">PART  No.</th></tr></thead>
@@ -188,13 +186,15 @@
     </template>
 
     <template id="report_purchaseorder_ahps" inherit_id="purchase.report_purchaseorder">
-        <xpath expr="//t[@t-call='purchase.report_purchaseorder_document']" position="attributes">
-            <attribute name="t-call">ahps_reports.report_purchaseorder_document</attribute>
+        <xpath expr="//t[@t-call='purchase.report_purchaseorder_document']" position="replace">
+            <t t-if="o.company_id.ahps_use_document_design" t-call="ahps_reports.report_purchaseorder_document" t-lang="o.partner_id.lang"/>
+            <t t-else="" t-call="purchase.report_purchaseorder_document" t-lang="o.partner_id.lang"/>
         </xpath>
     </template>
     <template id="report_purchasequotation_ahps" inherit_id="purchase.report_purchasequotation">
-        <xpath expr="//t[@t-call='purchase.report_purchasequotation_document']" position="attributes">
-            <attribute name="t-call">ahps_reports.report_purchasequotation_document</attribute>
+        <xpath expr="//t[@t-call='purchase.report_purchasequotation_document']" position="replace">
+            <t t-if="o.company_id.ahps_use_document_design" t-call="ahps_reports.report_purchasequotation_document" t-lang="o.partner_id.lang"/>
+            <t t-else="" t-call="purchase.report_purchasequotation_document" t-lang="o.partner_id.lang"/>
         </xpath>
     </template>
 </odoo>

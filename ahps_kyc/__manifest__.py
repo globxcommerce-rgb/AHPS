@@ -1,21 +1,20 @@
 {
     "name": "aHPS KYC (Customers & Suppliers)",
-    "version": "20.0.1.1.3",
+    "version": "20.0.1.2.0",
     "summary": "KYC registration, review and approval of aHPS customers and suppliers",
     "description": """
 Customer and supplier KYC process for Advanced Helios Process Solutions Ltd (aHPS):
 
-* Online KYC form (link sent by email, or optional public registration page) for
-  customers and suppliers: company details, contact persons, invoice / delivery
+* Separate online KYC forms for customers and suppliers (link sent by email, form
+  fixed by "Registers As"; optional public pages /kyc/register/customer|supplier): company details, contact persons, invoice / delivery
   addresses, documents, bank details (suppliers) and declaration
 * KYC tab on companies: TIN, company registration, postal address, company group,
   customer category as contact tags (End User > sector, Reseller)
 * Main, authorized, alternative, procurement and finance contacts
 * KYC documents per registration type (certificates, tax compliance, business
-  license, bank letter for suppliers)
+  license, bank letter, audited accounts for suppliers)
 * KYC workflow: Not Started > Requested > Submitted > Approved / Rejected
-* Customer number in YYYY.NNN format, assigned on approval of a customer;
-  approved suppliers are flagged as vendors
+* Customer ID (CYYYY.NNN) and supplier ID (SYYYY.NNN), assigned on approval
 * Duplicate company warning (same name or TIN)
 * Quotations cannot be sent or confirmed, and invoices cannot be posted,
   for customers whose KYC is not approved (configurable)
